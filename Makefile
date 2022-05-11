@@ -5,7 +5,7 @@ dft.o: dft.c
 	gcc -c dft.c -o dft.o
 
 fft: fft.o
-	gcc fft.o -o fft -lm
+	gcc fft.o -o fft -lm -lgsl -lgslcblas -Wl,-rpath=/usr/local/lib
 fft.o: fft.c mycomplex.h
 	gcc -c fft.c -o fft.o
 clean:
