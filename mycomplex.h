@@ -24,6 +24,9 @@ struct _complex sub(struct _complex a, struct _complex b){
 int fix(int a){
     return a << fixed_point_acc;
 }
+int ffix(double a){
+    return (int) (a * (1 << fixed_point_acc));
+}
 
 struct _complex mult(struct _complex a, struct _complex b){
     struct _complex product;
