@@ -5,10 +5,12 @@
 
 #define real(...) __VA_ARGS__ * 2
 #define imag(...) __VA_ARGS__ * 2 + 1
-#define KOMMA_POS 20
-#define TOTAL_BITS 32
 #define short __int64_t
-#define NORMALIZE 1
+
+#define KOMMA_POS 13            
+#define TOTAL_BITS 32           //used to simulate limited byte size and different hardware
+#define NORMALIZE 0             //0 or 1
+#define INDEPENDENT_FIX 0       //0 or 1 
 
 int n;
 int length;
@@ -16,37 +18,51 @@ short ** input_ptr;
 int verbose = 0;
 __int128_t one = 1;
 
+//returns a floating point number from fixed point
 float unfix(short a){
     return (float) a / (1 << KOMMA_POS);
 }
 
-short fix_mul(short a, short b){
-    __int128_t c = ((__int128_t) a * (__int128_t) b) >> (TOTAL_BITS - 2);
-    b = c & 1;
-    a = (c >> 1) + b;
-
-    if(a > (one << (TOTAL_BITS-2))) printf("There was an overflow: %f\n", unfix(a));
-    return (short) a;
-}
-
-
+//creates a fixed point number from an integer
 short ifix(int a){
     return a << KOMMA_POS;
 }
 
+//creates a fixed point number from a floating point number
 short ffix(double a){
     double ret = a * (1 << KOMMA_POS);
     return (short) ret;
 }
+
+//creates a fixed point number from a floating point number
+//this is used for twiddle to allow different independent ranges of accurracy 
 short fix_twiddle (double a){
+    if(1-INDEPENDENT_FIX) return ffix(a);
     double ret = a * (1 << (TOTAL_BITS - 2));
     return (short) ret;
 }
+
+//returns a floating point number from fixed point
+//this is used for twiddle to allow different independent ranges of accurracy 
 double unfix_twiddle(short a){
-    return (float) a / (1 << (TOTAL_BITS - 2));
+    if(INDEPENDENT_FIX) return (float) a / (1 << (TOTAL_BITS - 2));
+    return unfix(a);
 }
 
+//multiplies a twiddle value with another fixed point number
+//DONT use for another multiplication since twiddle might have a different accuracy
+short fix_mul(short a, short b){
+    __int128_t c;
+    if(INDEPENDENT_FIX) c = ((__int128_t) a * (__int128_t) b) >> TOTAL_BITS-3;
+    else c = ((__int128_t) a * (__int128_t) b) >> KOMMA_POS-1;
+    b = c & 1;
+    a = (c >> 1) + b;
 
+    if(abs(a) > (one << (TOTAL_BITS-1))) printf("There was an overflow: %f\n", unfix(a));
+    return (short) a;
+}
+
+//reverses bits to find location in the array
 int reverse_bits(int x, int amount){
     int result = 0; 
     for(int i = 0; i < amount; i++){
@@ -62,6 +78,7 @@ int lookup(int index){
     return reverse_bits(index, n);
 }
 
+//calculate twiddle the implementation in vhdl might be vastly different 
 short get_twiddle_real(int elements_per_block, int k){
     return fix_twiddle(cos(-2* M_PI*k/elements_per_block));
 }
@@ -117,7 +134,7 @@ int radix2_fft(short * x){
 }
 
 
-
+//driver code
 
 
 void read_input (const char* file_name)
