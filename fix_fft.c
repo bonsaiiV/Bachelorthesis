@@ -7,31 +7,36 @@
 #define imag(...) __VA_ARGS__ * 2 + 1
 #define short __int64_t
 
-#define KOMMA_POS 13            
-#define TOTAL_BITS 32           //used to simulate limited byte size and different hardware
-#define NORMALIZE 0             //0 or 1
-#define INDEPENDENT_FIX 0       //0 or 1 
+int komma_pos = 0;            
+int total_bits = 32;            //used to simulate limited byte size regarding overflow and accuracy
+#define NORMALIZE 1             //0 or 1
+#define INDEPENDENT_FIX 1       //0 or 1 
+
 
 int n;
 int length;
 short ** sensor1_ptr;
 short ** sensor2_ptr;
+
+int had_overflow = 0;
+int error_mode = 0;
+
 int verbose = 0;
 __int128_t one = 1;
 
 //returns a floating point number from fixed point
 float unfix(short a){
-    return (float) a / (1 << KOMMA_POS);
+    return (float) a / (1 << komma_pos);
 }
 
 //creates a fixed point number from an integer
 short ifix(int a){
-    return a << KOMMA_POS;
+    return a << komma_pos;
 }
 
 //creates a fixed point number from a floating point number
 short ffix(double a){
-    double ret = a * (1 << KOMMA_POS);
+    double ret = a * (1 << komma_pos);
     return (short) ret;
 }
 
@@ -39,14 +44,14 @@ short ffix(double a){
 //this is used for twiddle to allow different independent ranges of accurracy 
 short fix_twiddle (double a){
     if(1-INDEPENDENT_FIX) return ffix(a);
-    double ret = a * (1 << (TOTAL_BITS - 2));
+    double ret = a * (1 << (total_bits - 2));
     return (short) ret;
 }
 
 //returns a floating point number from fixed point
 //this is used for twiddle to allow different independent ranges of accurracy 
 double unfix_twiddle(short a){
-    if(INDEPENDENT_FIX) return (float) a / (1 << (TOTAL_BITS - 2));
+    if(INDEPENDENT_FIX) return (float) a / (1 << (total_bits - 2));
     return unfix(a);
 }
 
@@ -54,12 +59,15 @@ double unfix_twiddle(short a){
 //DONT use for another multiplication since twiddle might have a different accuracy
 short fix_mul(short a, short b){
     __int128_t c;
-    if(INDEPENDENT_FIX) c = ((__int128_t) a * (__int128_t) b) >> TOTAL_BITS-3;
-    else c = ((__int128_t) a * (__int128_t) b) >> KOMMA_POS-1;
+    if(INDEPENDENT_FIX) c = ((__int128_t) a * (__int128_t) b) >> total_bits-3;
+    else c = ((__int128_t) a * (__int128_t) b) >> komma_pos-1;
     b = c & 1;
     a = (c >> 1) + b;
 
-    if(abs(a) > (one << (TOTAL_BITS-1))) printf("There was an overflow: %f\n", unfix(a));
+    if(abs(a) > (one << (total_bits-1))){
+        //printf("There was an overflow: %f\n", unfix(a));
+        had_overflow++;
+    }
     return (short) a;
 }
 
@@ -113,7 +121,6 @@ int radix2_fft(short * x){
         n++;
     }*/
     
-    printf("\n");
     for(int layer = 1; layer <= n; layer++){
         int elements_per_block = 1 << (layer);
 
@@ -126,11 +133,6 @@ int radix2_fft(short * x){
                 butterfly(x, index_even, index_odd, elements_per_block, k);
             }
         }
-        /*
-        printf("\nAfter %dth layer:\n", layer-1);
-        for(int i = 0; i < length;i++){
-            printf("%f + %f i, ", unfix(x[real(i)]), unfix(x[imag(i)]));
-        } */
     }
 }
 
@@ -172,6 +174,19 @@ short create_input(int length, int i){
 
 
 int main(int argc, char *argv[]){
+    if (argc < 3)
+    {
+        printf("pls try \"./fix_fft #Bits input_file\"");
+        exit(EXIT_FAILURE);
+    }
+    char * p;
+    total_bits = (int) strtol(argv[1], &p, 10);
+    if(*p != '\0'){
+        printf("number of bits should be an int%c",*p);
+       exit(EXIT_FAILURE);
+    }
+
+    komma_pos = total_bits - 12;
 
     length = 1 << 15;
     int divisor = length;
@@ -179,8 +194,7 @@ int main(int argc, char *argv[]){
     while(divisor){
         divisor /= 2;
         n++;
-    }
-    
+    }    
 
     short * sensor1 = malloc(sizeof(short)*2*length);
     double * sensor1_gsl = malloc(sizeof(double)*2*length);
@@ -190,18 +204,15 @@ int main(int argc, char *argv[]){
     sensor2_ptr = &sensor2;
 
     //create inputs
-    printf("\n");
-    if (argc == 2)
-    {
-        read_input(argv[1]);
-    }else{
-        for(int i = 0; i<length; i++){
-            sensor1[real(i)] = create_input(length, i);
-            sensor1[imag(i)] = 0;
-            sensor2[real(i)] = create_input(length, i);
-            sensor2[imag(i)] = 0;
-        }
-    }
+    read_input(argv[2]);
+
+    /*
+    for(int i = 0; i<length; i++){
+        sensor1[real(i)] = create_input(length, i);
+        sensor1[imag(i)] = 0;
+        sensor2[real(i)] = create_input(length, i);
+        sensor2[imag(i)] = 0;
+    }*/
 
     //convert vector representation for gsl_fft
     for(int i = 0; i < length; i++){
@@ -211,12 +222,6 @@ int main(int argc, char *argv[]){
         sensor2_gsl[imag(i)] = unfix(sensor2[imag(i)]);
     }
 
-    if(verbose){
-        printf("\ninput:\n");
-        for(int i = 0; i < length;i++){
-            printf("%f + %f i, ", unfix(sensor1[real(i)]), unfix(sensor1[imag(i)]));
-        }
-    }
 
     //compute ffts
     radix2_fft(sensor1);
@@ -224,38 +229,59 @@ int main(int argc, char *argv[]){
     radix2_fft(sensor2);
     gsl_fft_complex_radix2_forward(sensor2_gsl, 1,length);
 
-    if(verbose){
-        printf("\noutput of gsl_fft:\n");
-        for(int i = 0; i < length/2;i++){
-            printf("(%f + %f i)",sensor1_gsl[2*i], sensor1_gsl[2*i+1]);
-            printf(", ");
-        }
-        printf("\noutput of implemented fft:\n");
-        for(int i = 0; i < length/2;i++){
-            int pos=lookup(i);
-            printf("(%f + %f i), ", unfix(sensor1[real(pos)]), unfix(sensor1[imag(pos)]));
-        }
-        printf("\n");
-    }
 
     float average_abs_error1 = 0.0;
+    float average_rel_error1 = 0.0;
     float average_abs_error2 = 0.0;
+    float average_rel_error2 = 0.0;
     float absolute_error;
+    double * output = malloc(sizeof(double)*length/2);
+    int r_index;
     int normalize_factor = (1 << 15) * NORMALIZE + (1-NORMALIZE);
+
     for(int i = 0; i < length/2; i++){
-        
-        absolute_error = fabs(sensor1_gsl[real(i)] - normalize_factor*unfix(sensor1[real(lookup(i))]));
+        r_index = lookup(i);
+        absolute_error = fabs(sensor1_gsl[real(i)] - normalize_factor*unfix(sensor1[real(r_index)]));
         average_abs_error1 += absolute_error;
-        absolute_error = fabs(sensor1_gsl[imag(i)] - normalize_factor*unfix(sensor1[imag(lookup(i))]));
+        average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[real(i)]));
+
+        absolute_error = fabs(sensor1_gsl[imag(i)] - normalize_factor*unfix(sensor1[imag(r_index)]));
         average_abs_error1 += absolute_error;
-        absolute_error = fabs(sensor2_gsl[real(i)] - normalize_factor*unfix(sensor2[real(lookup(i))]));
+        average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[imag(i)]));
+
+        absolute_error = fabs(sensor2_gsl[real(i)] - normalize_factor*unfix(sensor2[real(r_index)]));
         average_abs_error2 += absolute_error;
-        absolute_error = fabs(sensor2_gsl[imag(i)] - normalize_factor*unfix(sensor2[imag(lookup(i))]));
+        average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[real(i)]));
+
+        absolute_error = fabs(sensor2_gsl[imag(i)] - normalize_factor*unfix(sensor2[imag(r_index)]));
         average_abs_error2 += absolute_error;
+        average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[imag(i)]));
+
+
+        double tmp = unfix(sensor1[real(r_index)] - sensor2[real(r_index)]);
+        double tmp2 = unfix(sensor1[imag(r_index)]- sensor2[imag(r_index)]);
+        output[i] = tmp * tmp + tmp2 * tmp2;
     }
+
     average_abs_error1 /= length/2;
+    average_rel_error1 /= length/2;
     average_abs_error2 /= length/2;
-    printf("fix-point accuracy: %d\n", KOMMA_POS);
-    printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
-    
+    average_rel_error2 /= length/2;
+
+    if(verbose){
+        printf("fix-point accuracy: %d\n", komma_pos);
+        if(had_overflow) printf("there were %d overflows in multiplications", had_overflow);
+        printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
+        printf("average relative error: %f and %f\n", average_rel_error1, average_rel_error2);
+    }
+    else{
+        if(error_mode){
+            printf("%f %f %f %f\n", average_abs_error1,average_abs_error2,average_rel_error1,average_rel_error2);
+        }
+        else{
+            for(int i = 0; i < length/2; i++){
+                printf("%f ",output[i]);
+            }
+        }       
+    }
 }
