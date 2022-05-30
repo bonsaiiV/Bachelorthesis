@@ -14,7 +14,8 @@
 
 int n;
 int length;
-short ** input_ptr;
+short ** sensor1_ptr;
+short ** sensor2_ptr;
 int verbose = 0;
 __int128_t one = 1;
 
@@ -139,7 +140,8 @@ int radix2_fft(short * x){
 
 void read_input (const char* file_name)
 {
-    short * input = *input_ptr;
+    short * sensor1 = *sensor1_ptr;
+    short * sensor2 = *sensor2_ptr;
     FILE *numbers;
     numbers = fopen(file_name, "r");
 
@@ -148,14 +150,15 @@ void read_input (const char* file_name)
         exit (0);
     }
 
-    int real = 0.0;
-    int imag = 0.0;
-    int tmp;
+    int read1 = 0.0;
+    int read2 = 0.0;
     for (int i = 0; i < length; i++)
     {
-        fscanf(numbers, "%d\t%d\n ", &real, &imag);
-        input[real(i)] = ifix(real - imag);
-        input[imag(i)] = 0;
+        fscanf(numbers, "%d\t%d\n ", &read1, &read2);
+        sensor1[real(i)] = ifix(read1);
+        sensor1[imag(i)] = 0;
+        sensor2[real(i)] = ifix(read2);
+        sensor2[imag(i)] = 0;
     }
 
     fclose(numbers);
@@ -179,9 +182,12 @@ int main(int argc, char *argv[]){
     }
     
 
-    short * input = malloc(sizeof(short)*2*length);
-    double * input2 = malloc(sizeof(double)*2*length);
-    input_ptr = &input;
+    short * sensor1 = malloc(sizeof(short)*2*length);
+    double * sensor1_gsl = malloc(sizeof(double)*2*length);
+    sensor1_ptr = &sensor1;
+    short * sensor2 = malloc(sizeof(short)*2*length);
+    double * sensor2_gsl = malloc(sizeof(double)*2*length);
+    sensor2_ptr = &sensor2;
 
     //create inputs
     printf("\n");
@@ -190,50 +196,66 @@ int main(int argc, char *argv[]){
         read_input(argv[1]);
     }else{
         for(int i = 0; i<length; i++){
-            input[real(i)] = create_input(length, i);
-            input[imag(i)] = 0;
+            sensor1[real(i)] = create_input(length, i);
+            sensor1[imag(i)] = 0;
+            sensor2[real(i)] = create_input(length, i);
+            sensor2[imag(i)] = 0;
         }
     }
 
     //convert vector representation for gsl_fft
     for(int i = 0; i < length; i++){
-        input2[2*i] =  unfix(input[real(i)]);
-        input2[2*i+1] = unfix(input[imag(i)]);
+        sensor1_gsl[real(i)] = unfix(sensor1[real(i)]);
+        sensor1_gsl[imag(i)] = unfix(sensor1[imag(i)]);
+        sensor2_gsl[real(i)] = unfix(sensor2[real(i)]);
+        sensor2_gsl[imag(i)] = unfix(sensor2[imag(i)]);
     }
 
     if(verbose){
         printf("\ninput:\n");
         for(int i = 0; i < length;i++){
-            printf("%f + %f i, ", unfix(input[real(i)]), unfix(input[imag(i)]));
+            printf("%f + %f i, ", unfix(sensor1[real(i)]), unfix(sensor1[imag(i)]));
         }
     }
 
     //compute ffts
-    radix2_fft(input);
-    gsl_fft_complex_radix2_forward(input2, 1,length);
+    radix2_fft(sensor1);
+    gsl_fft_complex_radix2_forward(sensor1_gsl, 1,length);
+    radix2_fft(sensor2);
+    gsl_fft_complex_radix2_forward(sensor2_gsl, 1,length);
 
     if(verbose){
         printf("\noutput of gsl_fft:\n");
         for(int i = 0; i < length/2;i++){
-            printf("(%f + %f i)",input2[2*i], input2[2*i+1]);
+            printf("(%f + %f i)",sensor1_gsl[2*i], sensor1_gsl[2*i+1]);
             printf(", ");
         }
         printf("\noutput of implemented fft:\n");
         for(int i = 0; i < length/2;i++){
             int pos=lookup(i);
-            printf("(%f + %f i), ", unfix(input[real(pos)]), unfix(input[imag(pos)]));
+            printf("(%f + %f i), ", unfix(sensor1[real(pos)]), unfix(sensor1[imag(pos)]));
         }
         printf("\n");
     }
 
-    float average_error = 0.0;
+    float average_abs_error1 = 0.0;
+    float average_abs_error2 = 0.0;
+    float absolute_error;
+    int normalize_factor = (1 << 15) * NORMALIZE + (1-NORMALIZE);
     for(int i = 0; i < length/2; i++){
-        int normalize_factor = (1 << 15) * NORMALIZE + (1-NORMALIZE);
-        average_error += fabs(input2[real(i)] - normalize_factor*unfix(input[real(lookup(i))]));
-        average_error += fabs(input2[imag(i)] - normalize_factor*unfix(input[imag(lookup(i))]));
+        
+        absolute_error = fabs(sensor1_gsl[real(i)] - normalize_factor*unfix(sensor1[real(lookup(i))]));
+        average_abs_error1 += absolute_error;
+        absolute_error = fabs(sensor1_gsl[imag(i)] - normalize_factor*unfix(sensor1[imag(lookup(i))]));
+        average_abs_error1 += absolute_error;
+        absolute_error = fabs(sensor2_gsl[real(i)] - normalize_factor*unfix(sensor2[real(lookup(i))]));
+        average_abs_error2 += absolute_error;
+        absolute_error = fabs(sensor2_gsl[imag(i)] - normalize_factor*unfix(sensor2[imag(lookup(i))]));
+        average_abs_error2 += absolute_error;
     }
-    average_error /= length/2;
+    average_abs_error1 /= length/2;
+    average_abs_error2 /= length/2;
     printf("fix-point accuracy: %d\n", KOMMA_POS);
-    printf("average error: %f\n", average_error);
+    printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
     
 }
