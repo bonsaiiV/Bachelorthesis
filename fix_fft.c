@@ -10,7 +10,7 @@
 int komma_pos = 0;            
 int total_bits = 32;
 int twiddle_bits = 32;
-int do_round = 0;            //used to simulate limited byte size regarding overflow and accuracy
+int do_round = 0;           
 
 
 int n;
@@ -273,16 +273,14 @@ int main(int argc, char *argv[]){
         }
         gsl_fft_complex_radix2_forward(sensor1_gsl, 1,length);
         gsl_fft_complex_radix2_forward(sensor2_gsl, 1,length);
-    }
 
 
-    //compute ffts
-    for(int i = 0; i < number_of_bursts; i++){
-        radix2_fft(sensor1[i]);
-        radix2_fft(sensor2[i]);
-    }
 
-    if(error_mode){
+        radix2_fft(sensor1[0]);
+        radix2_fft(sensor2[0]);
+
+
+
 
         float average_abs_error1 = 0.0;
         float average_rel_error1 = 0.0;
@@ -332,25 +330,27 @@ int main(int argc, char *argv[]){
         }
     }else
     {
-    
         double * output = malloc(sizeof(double)*length/2);
-
-        double sum1 ;
-        double sum2;
-        int r_index;
-        for(int i = 0; i < length/2; i++){
-            r_index = lookup(i);
-            sum1 = 0.0;
-            sum2 = 0.0;
-            for(int burst = 0; burst < number_of_bursts; burst++){
-                sum1 += unfix(sensor1[burst][real(r_index)]) * unfix(sensor1[burst][real(r_index)]) + unfix(sensor1[burst][imag(r_index)])*unfix(sensor1[burst][imag(r_index)]);
-                sum2 += unfix(sensor2[burst][real(r_index)]) * unfix(sensor2[burst][real(r_index)]) + unfix(sensor2[burst][imag(r_index)])*unfix(sensor2[burst][imag(r_index)]);
-
-            }
-            sum1 = sum1 / number_of_bursts;
-            sum2 = sum2 / number_of_bursts;
-            output[i] = sum1 - sum2;
+        for(int i = 0; i < number_of_bursts; i++){
+            output[i] = 0.0;
         }
+
+        double tmp1;
+        double tmp2;
+        int r_index;
+        for(int burst = 0; burst < number_of_bursts; burst++){
+            radix2_fft(sensor1[burst]);
+            radix2_fft(sensor2[burst]);
+            for(int i = 0; i < length/2; i++){
+                r_index = lookup(i);
+                tmp1 = unfix(sensor1[burst][real(r_index)]) * unfix(sensor1[burst][real(r_index)]) + unfix(sensor1[burst][imag(r_index)])*unfix(sensor1[burst][imag(r_index)]);
+                tmp2 = unfix(sensor2[burst][real(r_index)]) * unfix(sensor2[burst][real(r_index)]) + unfix(sensor2[burst][imag(r_index)])*unfix(sensor2[burst][imag(r_index)]);
+
+
+                output[i] += (tmp1-tmp2)/number_of_bursts;
+            }
+        }
+        output[2] = had_overflow * 10;
         for(int i = 0; i < length/2; i++){
             printf("%f ",output[i]);
         }
