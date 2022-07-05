@@ -81,6 +81,11 @@ int reverse_bits(int x, int amount){
 int lookup(int index){
     return reverse_bits(index, n);
 }
+int rotate(int index, int amount){
+    int mask1 = length - 1 - (amount?(1 << amount):0);
+    int mask2 = length -1 - mask1;
+    return ((mask1 & index) >> amount) + ((mask2 & index) << (n-amount));
+}
 
 //calculate twiddle the implementation in vhdl might be vastly different 
 short get_twiddle_real(int elements_per_block, int k){
@@ -117,8 +122,18 @@ int radix2_fft(short * x){
     }*/
     
     for(int layer = 1; layer <= n; layer++){
+        /*
         int elements_per_block = 1 << (layer);
 
+       for(int i = 1; i < length >> 1; i++){
+           int index_even = rotate(i, layer);
+           int index_odd  = rotate(i+1, layer);
+           butterfly(x, index_even, index_odd, elements_per_block, i%(elements_per_block/2));
+       }*/
+
+
+
+        int elements_per_block = 1 << (layer);
         for(int block = 0; block < (1 << (n-layer) ); block++){
 
             for(int k = 0; k < (elements_per_block/2); k++){    
@@ -135,7 +150,7 @@ int radix2_fft(short * x){
 //driver code
 
 
-void read_input (const char* file_name, int number_of_bursts, short *(*sensor1_ptr)[], short *(*sensor2_ptr)[])
+int read_input (const char* file_name, int number_of_bursts, short *(*sensor1_ptr)[], short *(*sensor2_ptr)[])
 {
     short **sensor1 = *sensor1_ptr;
     short **sensor2 = *sensor2_ptr;
@@ -155,7 +170,7 @@ void read_input (const char* file_name, int number_of_bursts, short *(*sensor1_p
     {
         for (int i = 0; i < length; i++)
         {
-            fscanf(numbers, "%d\t%d\n ", &read1, &read2);
+            if(EOF == fscanf(numbers, "%d\t%d\n ", &read1, &read2))had_overflow++;//return burst;
             *(sensor1[burst]+real(i)) = ifix(read1);
             *(sensor1[burst]+imag(i)) = 0;
             *(sensor2[burst]+real(i)) = ifix(read2);
@@ -231,7 +246,7 @@ int main(int argc, char *argv[]){
     }
     komma_pos = total_bits - 13;
 
-    length = 1 << 15;
+    length = 1 << 14;
     int divisor = length;
     n = -1;
     while(divisor){

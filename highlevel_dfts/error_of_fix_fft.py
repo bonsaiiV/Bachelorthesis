@@ -3,20 +3,20 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 plot_error = 0
-plot_for_bursts = 1
+plot_for_bursts = 0
 
 def print_float(s):
     print(s+", ")
     return float(s)
 
 if plot_error:
-    input_bits = range(14, 33)
-    twiddle_bits = [12, 14, 16, 28]
+    input_bits = range(20, 33)
+    twiddle_bits = [13, 14, 16, 28]
     #titles = ["absolute error"]
 elif plot_for_bursts:
-    input_bursts = range(10, 200, 30)
+    input_bursts = [1000] #range(10, 200, 30)
 else:
-    input_bits = range(16,25,2)
+    input_bits = range(5,8,1)
 output_list = []
 if plot_error:
     for twiddle_index in range(len(twiddle_bits)):
@@ -24,9 +24,9 @@ if plot_error:
         for amount_of_bits in input_bits:
             output = bytes.decode(check_output(
                 ["./fix_fft",
-                "-b",
-                str(twiddle_bits[twiddle_index]),
                 "-t",
+                str(twiddle_bits[twiddle_index]),
+                "-b",
                 str(amount_of_bits),
                 "-e",
                 "SNS_Test_data_long_500.dat"
@@ -40,9 +40,9 @@ elif plot_for_bursts:
             "-n",
             str(amount_of_bursts),
             "-b",
-            "15",
+            "32",
             "-t",
-            "20",
+            "32",
             "SNS_Test_data_long_500.dat"
             ])).split()
         output = list(map(float ,output))
@@ -52,12 +52,12 @@ else:
         output = bytes.decode(check_output(
             ["./fix_fft",
             "-n",
-            "8",
+            "2000",
             "-b",
-            str(amount_of_bits),
+            "19",
             "-t",
-            "20",
-            "SNS_Test_data_long_500.dat"
+            str(amount_of_bits),
+            "SNS_Test_data_long_field.dat"
             ])).split()
         output = list(map(float ,output))
         output_list.append(output)
@@ -77,7 +77,7 @@ elif plot_for_bursts:
 else:
     for i in range(len(input_bits)):
         output_for_plot = np.array(output_list[i])
-        plt.subplot((len(input_bits)+1) >> 1,2,i+1)
+        plt.subplot((len(input_bits)),1,i+1)
         plt.title("Number of bits "+str(input_bits[i]))  
         plt.plot(np.array(list(range(1,len(output_for_plot)))),output_for_plot[1:])
 
