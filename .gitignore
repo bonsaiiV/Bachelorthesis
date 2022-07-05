@@ -1,5 +1,11 @@
-*.o
-fft
-dft
-fix_fft
+#test data
 *.dat
+
+#compiled/output files
+*.o
+dft
+!/dft/
+fix_fft
+!/fix_fft/
+*.cf
+*.vcd
