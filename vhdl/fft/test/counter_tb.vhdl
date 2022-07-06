@@ -14,20 +14,78 @@ architecture test of counter_tb is
     end component;
 
     signal clk, clr, r : std_logic;
-    signal val : std_logic_vector;
+    signal val : std_logic_vector(2 downto 0);
 begin
 
-    count g: counter
+    count: counter
         generic map(
-            count_width => 4;
-            max => 12;
+            count_width => 3,
+            max => 6
         )
         port map(
-            clk => clk;
-            clr => clr;
-            reset => r;
-            value => val;
-        )
-    
+            clk => clk,
+            clr => clr,
+            resets => r,
+            value => val
+        );
     process begin
+        clr <= '1';
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clr <= '0';
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clr <= '1';
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clr <= '0';
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+        clk <= '0';
+        wait for 1 ns;
+        clk <= '1';
+        wait for 1 ns;
+
+        wait;
+    end process;
 end test;
