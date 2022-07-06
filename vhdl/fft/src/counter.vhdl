@@ -13,7 +13,6 @@ end counter;
 architecture counter_b of counter is
 
     signal count : unsigned(count_width-1 downto 0);
-    signal reached_max : std_logic;
 
 begin
 
@@ -21,25 +20,18 @@ process(clk) begin
     if rising_edge(clk) then
         if clr = '1' then
             count <= (others => '0');
+            resets <= '0';
         else
             if count = max then
                 count <= (others => '0');
-                reached_max <= '1';
+                resets <= '1';
             else
                 count <= count + 1;
+                resets <= '0';
             end if;
         end if;
     end if;
 end process;
-process(count) begin
-    if count >= max then
-        reached_max <= '1';
-    else
-        reached_max <= '0';
-    end if;
-end process;
 value <= std_logic_vector(count);
-resets <= std_logic(reached_max);
-
 
 end counter_b;
