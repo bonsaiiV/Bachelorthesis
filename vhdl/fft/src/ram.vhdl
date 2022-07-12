@@ -15,21 +15,18 @@ end ram;
 architecture ram_b of ram is
     type MEMORY is array(0 to 7) of signed(width-1 downto 0);
     signal ram_mem :MEMORY :=(
-        x"0",x"1",x"2",x"3", 
-        x"4",x"5",x"6",x"7");
+        x"0",x"0",x"0",x"0", 
+        x"0",x"0",x"0",x"0");
 begin
-    process(write_addr_A, write_A, write_enable_A)
+    process(write_addr_A, write_A, write_enable_A, write_addr_B, write_B, write_enable_B)
         variable ram_write_addr_A: natural range 0 to 2**length-1;
+        variable ram_write_addr_B: natural range 0 to 2**length-1;
     begin
-        if(write_enable_A = '1') then
+        if(rising_edge(write_enable_A)) then
             ram_write_addr_A := to_integer(unsigned(write_addr_A));
             ram_mem(ram_write_addr_A) <= write_A;
         end if;
-    end process;
-    process(write_addr_B, write_B, write_enable_B)
-            variable ram_write_addr_B: natural range 0 to 2**length-1;
-    begin
-        if(write_enable_B = '1') then
+        if(rising_edge(write_enable_B)) then
             ram_write_addr_B := to_integer(unsigned(write_addr_B));
             ram_mem(ram_write_addr_B) <= write_B;
         end if;

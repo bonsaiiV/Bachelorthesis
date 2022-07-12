@@ -68,6 +68,7 @@ begin
         write_addr_B <= "011";
         write_enable_A <= '1';
         write_enable_B <= '1';
+        wait for 1 ns;
         write_enable_A <= '0';
         write_enable_A <= '0';
         read_addr_A <= "010";
