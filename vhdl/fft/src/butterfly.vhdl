@@ -20,7 +20,7 @@ architecture butterfly_b of butterfly is
     end component;
 
     signal A_real, A_imag, B_real, B_imag, tmp_real, tmp_imag : signed(width_A-1 downto 0);
-    signal outA_real_buf, outA_imag_buf, outB_real_buf, outB_imag_buf : signed(width_A downto 0);
+    signal outA_real_buf, outA_imag_buf, outB_real_buf, outB_imag_buf : signed(width_A-1 downto 0);
 begin
     m : c_mult
         generic map(
@@ -41,8 +41,8 @@ begin
     outB_real_buf <= inA_real - tmp_real;
     outB_imag_buf <= inA_imag - tmp_imag;
 
-    outA_real <= (outA_real_buf(width_A-1 downto width_A-1), outA_real_buf(width_A-1 downto 1));
-    outA_imag <= (outA_imag_buf(width_A-1 downto width_A-1), outA_imag_buf(width_A-1 downto 1));
-    outB_real <= (outB_real_buf(width_A-1 downto width_A-1), outB_real_buf(width_A-1 downto 1));
-    outB_imag <= (outB_imag_buf(width_A-1 downto width_A-1), outB_imag_buf(width_A-1 downto 1));
+    outA_real <= (outA_real_buf(width_A-1)& outA_real_buf(width_A-1 downto 1));
+    outA_imag <= (outA_imag_buf(width_A-1)& outA_imag_buf(width_A-1 downto 1));
+    outB_real <= (outB_real_buf(width_A-1)& outB_real_buf(width_A-1 downto 1));
+    outB_imag <= (outB_imag_buf(width_A-1)& outB_imag_buf(width_A-1 downto 1));
 end butterfly_b;
