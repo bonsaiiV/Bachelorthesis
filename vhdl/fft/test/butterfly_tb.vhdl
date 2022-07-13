@@ -2,19 +2,21 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity butterfly_tb is
-end butterfly_tb;
+entity butterfly_simple_tb is
+end butterfly_simple_tb;
 
-architecture test of butterfly_tb is
+architecture test of butterfly_simple_tb is
     component butterfly
     generic(width_A, width_twiddle : integer);
-    port(   inA_real, inA_imag, inB_real, inB_imag     : in  signed(width_A-1 downto 0);
-            twiddle_real, twiddle_imag                 : in  signed(width_twiddle-1 downto 0);
-            outA_real, outA_imag, outB_real, outB_imag : out signed(width_A-1 downto 0));
+    port(   inA, inB   : in  std_logic_vector(2*width_A-1 downto 0);
+            twiddle    : in  std_logic_vector(2*width_twiddle-1 downto 0);
+            outA, outB : out std_logic_vector(2*width_A-1 downto 0));
     end component;
 
     signal inA_real, inA_imag, outA_real, outA_imag, inB_real, inB_imag, outB_real, outb_imag: signed(7 downto 0);
     signal twiddle_real, twiddle_imag: signed(5 downto 0);
+    signal inA, inB, outA, outB: std_logic_vector(15 downto 0);
+    signal twiddle: std_logic_vector(11 downto 0);
 begin
 
     m: butterfly
@@ -23,18 +25,20 @@ begin
             width_twiddle => 6
         )
         port map(
-            inA_real => inA_real,
-            inA_imag => inA_imag,
-            outA_real => outA_real,
-            outA_imag => outA_imag,
-            twiddle_real => twiddle_real,
-            twiddle_imag => twiddle_imag,
-            inB_real => inB_real,
-            inB_imag => inB_imag,
-            outB_real => outB_real,
-            outb_imag => outb_imag
+            inA => inA,
+            outA => outA,
+            twiddle => twiddle,
+            inB => inB,
+            outB => outB
         );
-
+    inA <= std_logic_vector(inA_imag& inA_real);
+    inB <= std_logic_vector(inB_imag& inB_real);
+    twiddle <= std_logic_vector(twiddle_imag& twiddle_real);
+    outA_real <= signed(outA(7 downto 0));
+    outA_imag <= signed(outA(15 downto 8));
+    outB_imag <= signed(outB(15 downto 8));
+    outB_real <= signed(outB(7 downto 0));
+    
     process begin
         inA_real <= "00000110"; 
         inA_imag <= "00000000"; 

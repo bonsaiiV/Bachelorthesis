@@ -6,14 +6,14 @@ entity ram is
     generic(width:integer;
             length:integer);
     port(write_addr_A, write_addr_B: in std_logic_vector(length-1 downto 0);
-         write_A, write_B: in signed(width-1 downto 0);
+         write_A, write_B: in std_logic_vector(width-1 downto 0);
          write_enable_A, write_enable_B: in std_logic;
          read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
-         read_A, read_B: out signed(width-1 downto 0));
+         read_A, read_B: out std_logic_vector(width-1 downto 0));
 end ram;
 
 architecture ram_b of ram is
-    type MEMORY is array(0 to 7) of signed(width-1 downto 0);
+    type MEMORY is array(0 to 7) of std_logic_vector(width-1 downto 0);
     signal ram_mem :MEMORY :=(
         x"0",x"0",x"0",x"0", 
         x"0",x"0",x"0",x"0");

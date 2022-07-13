@@ -11,20 +11,20 @@ architecture test of ram_tb is
         generic(width:integer;
             length:integer);
         port(write_addr_A, write_addr_B: in std_logic_vector(length-1 downto 0);
-             write_A, write_B: in signed(width-1 downto 0);
+             write_A, write_B: in std_logic_vector(width-1 downto 0);
              write_enable_A, write_enable_B: in std_logic;
              read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
-             read_A, read_B: out signed(width-1 downto 0));
+             read_A, read_B: out std_logic_vector(width-1 downto 0));
     end component;
     
     signal write_addr_A, write_addr_B: std_logic_vector(2 downto 0);
-    signal write_A, write_B: signed(3 downto 0);
+    signal write_A, write_B: std_logic_vector(3 downto 0);
     signal write_enable_A, write_enable_B: std_logic := '0';
     signal read_addr_A, read_addr_B: std_logic_vector(2 downto 0):= "000";
-    signal read_A, read_B: signed(3 downto 0);
+    signal read_A, read_B: std_logic_vector(3 downto 0);
 
 begin
-    ram_real: ram
+    ram_i: ram
     generic map (
         width => 4,
         length => 3

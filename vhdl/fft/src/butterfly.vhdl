@@ -5,9 +5,9 @@ use ieee.numeric_std.all;
 
 entity butterfly is 
     generic(width_A, width_twiddle : integer);
-    port(   inA_real, inA_imag, inB_real, inB_imag     : in  signed(width_A-1 downto 0);
-            twiddle_real, twiddle_imag                 : in  signed(width_twiddle-1 downto 0);
-            outA_real, outA_imag, outB_real, outB_imag : out signed(width_A-1 downto 0));
+    port(   inA, inB   : in  std_logic_vector(2*width_A-1 downto 0);
+            twiddle    : in  std_logic_vector(2*width_twiddle-1 downto 0);
+            outA, outB : out std_logic_vector(2*width_A-1 downto 0));
 end butterfly;
 
 
@@ -19,8 +19,9 @@ architecture butterfly_b of butterfly is
                  C_real, C_imag: out signed(width_A-1 downto 0));
     end component;
 
-    signal A_real, A_imag, B_real, B_imag, tmp_real, tmp_imag : signed(width_A-1 downto 0);
+    signal inA_real, inA_imag, inB_real, inB_imag, tmp_real, tmp_imag : signed(width_A-1 downto 0);
     signal outA_real_buf, outA_imag_buf, outB_real_buf, outB_imag_buf : signed(width_A-1 downto 0);
+    signal twiddle_real, twiddle_imag : signed(width_twiddle-1 downto 0);
 begin
     m : c_mult
         generic map(
@@ -35,14 +36,17 @@ begin
             C_real => tmp_real,
             C_imag => tmp_imag
         );
-
+    inA_real <= signed(inA(width_A-1 downto 0));
+    inA_imag <= signed(inA(2*width_A-1 downto width_A));
+    inB_real <= signed(inB(width_A-1 downto 0));
+    inB_imag <= signed(inB(2*width_A-1 downto width_A));
+    twiddle_real <= signed(twiddle(width_twiddle-1 downto 0));
+    twiddle_imag <= signed(twiddle(2*width_twiddle-1 downto width_twiddle));
     outA_real_buf <= inA_real + tmp_real;
     outA_imag_buf <= inA_imag + tmp_imag;
     outB_real_buf <= inA_real - tmp_real;
     outB_imag_buf <= inA_imag - tmp_imag;
 
-    outA_real <= (outA_real_buf(width_A-1)& outA_real_buf(width_A-1 downto 1));
-    outA_imag <= (outA_imag_buf(width_A-1)& outA_imag_buf(width_A-1 downto 1));
-    outB_real <= (outB_real_buf(width_A-1)& outB_real_buf(width_A-1 downto 1));
-    outB_imag <= (outB_imag_buf(width_A-1)& outB_imag_buf(width_A-1 downto 1));
+    outA <= std_logic_vector(outA_imag_buf(width_A-1)& outA_imag_buf(width_A-1 downto 1)& outA_real_buf(width_A-1)& outA_real_buf(width_A-1 downto 1));
+    outB <= std_logic_vector(outB_imag_buf(width_A-1)& outB_imag_buf(width_A-1 downto 1)& outB_real_buf(width_A-1)& outB_real_buf(width_A-1 downto 1));
 end butterfly_b;
