@@ -12,7 +12,7 @@ end counter;
 
 architecture counter_b of counter is
 
-    signal count : unsigned(count_width-1 downto 0);
+    signal count : unsigned(count_width-1 downto 0) := (others => '0');
 
 begin
 
