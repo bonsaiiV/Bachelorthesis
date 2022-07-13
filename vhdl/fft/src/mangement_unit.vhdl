@@ -3,13 +3,13 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity management_unit is
-    generic(width: integer;
+    generic(
             N: integer;
             layer_l: integer);
     port(fft_start, clk: in std_logic;
-         twiddle_addr: out std_logic_vector(0 to 3);
+         twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
-         fft_done, write_selector: out std_logic);
+         fft_done, write_A_enable, write_B_enable: out std_logic);
 end management_unit;
 
 architecture management_unit_b of management_unit is
@@ -23,13 +23,15 @@ architecture management_unit_b of management_unit is
 
     signal fft_finished: std_logic;
     signal index_resets, fft_running, active_clk: std_logic := '0';
-    signal index: std_logic_vector(N-1 downto 0);
+    signal index: std_logic_vector(N-2 downto 0);
+    signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
+    signal tmp_mask, constant_mask: std_logic_vector(N-1 downto 0) := ('1', others => '0');
 begin
     Index_cnt: counter
         generic map (
-            count_width => N,
-            max => 2**N-1
+            count_width => N-1,
+            max => 2**(N-1)-1
         )
         port map(
             clr => fft_finished,
@@ -40,7 +42,7 @@ begin
     LayerNr: counter
         generic map (
             count_width => layer_l,
-            max => n
+            max => n-1
         )
         port map(
             clr => fft_finished,
@@ -58,10 +60,14 @@ begin
     end process;
     fft_done <= not fft_running;
     active_clk <= fft_running and clk;
-    addr_A_read <= std_logic_vector(unsigned(index(N-1 downto 1) & '0') ROL to_integer(unsigned(layer)));
-    addr_B_read <= std_logic_vector(unsigned(index(N-1 downto 0) & '1') ROL to_integer(unsigned(layer)));
-    addr_write <= index;
-    write_selector <= index(0);
+    addr_A_read <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
+    addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
+    addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
+    addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
+    write_A_enable <= active_clk;
+    write_b_enable <= active_clk;
+    twiddle_addr <= index and twiddle_mask(N-2 downto 0);
+    twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;
     
