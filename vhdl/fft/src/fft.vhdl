@@ -3,6 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity fft is
+    port (
+        clk, fft_start : in std_logic;
+        fft_done : out std_logic
+    );
 end fft;
 
 architecture fft_b of fft is
@@ -15,10 +19,9 @@ architecture fft_b of fft is
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
         fft_done, write_A_enable, write_B_enable: out std_logic);
     end component;
-    signal fft_start, clk: std_logic:='0';
     signal twiddle_addr: std_logic_vector(1 downto 0);
     signal addr_A_read, addr_B_read, addr_A_write, addr_B_write: std_logic_vector(2 downto 0);
-    signal fft_done, write_A_enable, write_B_enable: std_logic;
+    signal write_A_enable, write_B_enable: std_logic;
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(2 downto 0);
 
     component butterfly
@@ -110,22 +113,5 @@ begin
     write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2);
     read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2);
     read_B_addr <= addr_B_read(0)&addr_B_read(1)&addr_B_read(2);
-    process begin
-        wait for 1 ns;
-        clk <= '1';
-        wait for 1 ns;
-        clk <= '0';
-        fft_start <= '1';
-        wait for 1 ns;
-        fft_start <= '0';
-        --for i in 0 to 25 loop
-        while fft_done = '0' loop
-            wait for 1 ns;
-            clk <= '1';
-            wait for 1 ns;
-            clk <= '0';
-        end loop;
-        wait for 10 ns;
-        wait;
-    end process;
+    
 end fft_b;
