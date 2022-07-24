@@ -15,8 +15,9 @@ end ram;
 architecture ram_b of ram is
     type MEMORY is array(0 to 7) of std_logic_vector(width-1 downto 0);
     signal ram_mem :MEMORY :=(
-        x"0",x"0",x"0",x"0", 
-        x"0",x"0",x"0",x"0");
+        x"0001",x"0004",x"0009",x"0010",
+        x"00FF",x"00FC",x"00F7",x"00F0");
+    signal test0, test1, test2, test3, test4, test5, test6, test7 :std_logic_vector(15 downto 0);
 begin
     process(write_addr_A, write_A, write_enable_A, write_addr_B, write_B, write_enable_B)
         variable ram_write_addr_A: natural range 0 to 2**length-1;
@@ -33,5 +34,13 @@ begin
     end process;
     read_A <= ram_mem(to_integer(unsigned(read_addr_A)));
     read_B <= ram_mem(to_integer(unsigned(read_addr_B)));
+    test0 <= ram_mem(0);
+    test1 <= ram_mem(4);
+    test2 <= ram_mem(2);
+    test3 <= ram_mem(6);
+    test4 <= ram_mem(1);
+    test5 <= ram_mem(5);
+    test6 <= ram_mem(3);
+    test7 <= ram_mem(7);
 
 end ram_b;
