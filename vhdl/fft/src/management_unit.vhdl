@@ -9,7 +9,8 @@ entity management_unit is
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
-         fft_done, write_A_enable, write_B_enable: out std_logic);
+         fft_done, write_A_enable, write_B_enable: out std_logic;
+         get_input: out std_logic);
 end management_unit;
 
 architecture management_unit_b of management_unit is
@@ -64,6 +65,7 @@ begin
     addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
     addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
     addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
+    get_input <= '1' when unsigned(layer) = 0 else '0';
     write_A_enable <= active_clk;
     write_b_enable <= active_clk;
     twiddle_addr <= index and twiddle_mask(N-2 downto 0);
