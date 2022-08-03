@@ -19,9 +19,9 @@ architecture butterfly_b of butterfly is
                  C_real, C_imag: out signed(width_A-1 downto 0));
     end component;
 
-    signal inA_real, inA_imag, inB_real, inB_imag, tmp_real, tmp_imag : signed(width_A-1 downto 0);
-    signal outA_real_buf, outA_imag_buf, outB_real_buf, outB_imag_buf : signed(width_A-1 downto 0);
-    signal twiddle_real, twiddle_imag : signed(width_twiddle-1 downto 0);
+    signal inA_real, inA_imag, inB_real, inB_imag, tmp_real, tmp_imag : signed(width_A-1 downto 0):= (others => '0');
+    signal outA_real_buf, outA_imag_buf, outB_real_buf, outB_imag_buf : signed(width_A-1 downto 0):= (others => '0');
+    signal twiddle_real, twiddle_imag : signed(width_twiddle-1 downto 0) := (others => '0');
 begin
     m : c_mult
         generic map(

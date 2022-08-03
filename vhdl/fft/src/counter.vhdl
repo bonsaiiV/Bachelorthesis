@@ -7,7 +7,7 @@ entity counter is
     port(clk : in std_logic;
          clr : in std_logic;
          value : out std_logic_vector(count_width-1 downto 0);
-         resets : out std_logic);
+         resets : out std_logic:='0');
 end counter;
 
 architecture counter_b of counter is
