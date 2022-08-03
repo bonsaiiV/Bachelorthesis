@@ -46,7 +46,7 @@ architecture fft_b of fft is
             length:integer);
         port(write_addr_A, write_addr_B: in std_logic_vector(length-1 downto 0);
              write_A, write_B: in std_logic_vector(width-1 downto 0);
-             write_enable_A, write_enable_B: in std_logic;
+             write_enable_A, write_enable_B, clk: in std_logic;
              read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
              read_A, read_B: out std_logic_vector(width-1 downto 0);
              test0 : out std_logic_vector(15 downto 0));
@@ -104,6 +104,7 @@ begin
         write_B => write_B,
         write_enable_A => write_A_enable, 
         write_enable_B => write_B_enable,
+        clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
         read_A => read_A, 

@@ -66,8 +66,8 @@ begin
     addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
     addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
     get_input <= '1' when unsigned(layer) = 0 else '0';
-    write_A_enable <= active_clk;
-    write_b_enable <= active_clk;
+    write_A_enable <= not fft_running;
+    write_b_enable <= not fft_running;
     twiddle_addr <= index and twiddle_mask(N-2 downto 0);
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
