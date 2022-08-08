@@ -199,6 +199,7 @@ void get_int(int * target, char * source, char option){
 int main(int argc, char *argv[]){
     int number_of_bursts = 1;
     char * input_file;
+    int print_mode = 0;
 
     for(int i = 1; i < argc; i++){
         if(*(argv[i]) == '-'){
@@ -234,6 +235,9 @@ int main(int argc, char *argv[]){
                     break;
                 case 'e':
                     error_mode = 1;
+                    break;
+                case 'p':
+                    print_mode = 1;
             }
         }
         else{
@@ -267,17 +271,38 @@ int main(int argc, char *argv[]){
     //create inputs
     read_input(input_file, number_of_bursts, sensor1_ptr, sensor2_ptr);
     /*
-    for(int i = 0; i<length; i++){
-        sensor1[real(i)] = create_input(length, i);
-        sensor1[imag(i)] = 0;
-        sensor2[real(i)] = create_input(length, i);
-        sensor2[imag(i)] = 0;
+    for(int i = 0; i<length/2; i++){
+        *(sensor1[0]+real(i)) = create_input(length, i);
+        *(sensor1[0]+imag(i)) = 0;
+        *(sensor2[0]+real(i)) = create_input(length, i);
+        *(sensor2[0]+imag(i)) = 0;
+    }
+        for(int i = 0; i<length/2; i++){
+        *(sensor1[0]+real(i+length/2)) = -1*create_input(length, i);
+        *(sensor1[0]+imag(i+length/2)) = -1*0;
+        *(sensor2[0]+real(i+length/2)) = -1*create_input(length, i);
+        *(sensor2[0]+imag(i+length/2)) = -1*0;
     }*/
 
-    //creating results to compare
-    double * sensor1_gsl;
-    double * sensor2_gsl;
-    if(error_mode){
+
+    if(print_mode){
+        printf("entering print mode\n");
+        for(int i = 0; i< length; i++){
+            printf("%f + %fi ,",unfix(*(sensor1[0]+real(i))), unfix(*(sensor1[0]+imag(i))));
+        }
+        printf("\n");
+    
+        radix2_fft(sensor1[0]);
+        radix2_fft(sensor2[0]);
+        for(int i = 0; i< length; i++){
+            printf("%f + %fi ,",unfix(*(sensor1[0]+real(i))), unfix(*(sensor1[0]+imag(i))));
+        }
+        printf("\n");
+    }
+    else if(error_mode){
+            //creating results to compare
+        double * sensor1_gsl;
+        double * sensor2_gsl;
         sensor1_gsl = malloc(sizeof(double)*2*length);
         sensor2_gsl = malloc(sizeof(double)*2*length);
         for(int i = 0; i < length; i++){
