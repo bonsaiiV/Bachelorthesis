@@ -9,7 +9,7 @@ entity fft is
         clk, fft_start : in std_logic;
         fft_done : out std_logic;
         inA, inB : std_logic_vector(2*width-1 downto 0);
-        test0 : out std_logic_vector(15 downto 0)
+        test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0)
     );
 end fft;
 
@@ -49,7 +49,7 @@ architecture fft_b of fft is
              write_enable_A, write_enable_B, clk: in std_logic;
              read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
              read_A, read_B: out std_logic_vector(width-1 downto 0);
-             test0 : out std_logic_vector(15 downto 0));
+             test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0));
     end component;
     component rom
     generic(
@@ -86,11 +86,11 @@ begin
         width_twiddle => width_twiddle
     )
     port map(
-        inA => bfu_A,
-        outA => write_A,
+        inA => read_A,
+        outA => bfu_A,
         twiddle => twiddle,
-        inB => bfu_B,
-        outB => write_B
+        inB => read_B,
+        outB => bfu_B
     );
     ram_real: ram
     generic map (
@@ -109,7 +109,14 @@ begin
         read_addr_B => read_B_addr,
         read_A => read_A, 
         read_B => read_B,
-        test0 => test0
+        test0 => test0,
+        test1 => test1,
+        test2 => test2,
+        test3 => test3,
+        test4 => test4,
+        test5 => test5,
+        test6 => test6,
+        test7 => test7
     );
     twiddle_rom: rom
     generic map (
@@ -120,11 +127,11 @@ begin
         addr => twiddle_addr,
         value => twiddle
     );
-    bfu_A <= read_A when get_input = '0' else inA;
-    bfu_B <= read_B when get_input = '0' else inB;
-    write_A_addr <= addr_A_write(0)&addr_A_write(1)&addr_A_write(2);
-    write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2);
-    read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2);
-    read_B_addr <= addr_B_read(0)&addr_B_read(1)&addr_B_read(2);
+    write_A <= bfu_A when get_input = '0' else inA;
+    write_B <= bfu_B when get_input = '0' else inB;
+    write_A_addr <= addr_A_write(0)&addr_A_write(1)&addr_A_write(2) when get_input = '0' else addr_A_write;
+    write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2) when get_input = '0' else addr_B_write;
+    read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2) when get_input = '0' else addr_A_read;
+    read_B_addr <= addr_B_read(0)&addr_B_read(1)&addr_B_read(2) when get_input = '0' else addr_B_read;
     
 end fft_b;
