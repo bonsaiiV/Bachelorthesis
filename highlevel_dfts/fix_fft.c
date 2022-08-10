@@ -87,7 +87,6 @@ int rotate(int index, int amount){
     return ((mask1 & index) >> amount) + ((mask2 & index) << (n-amount));
 }
 
-//calculate twiddle the implementation in vhdl might be vastly different 
 short get_twiddle_real(int elements_per_block, int k){
     return fix_twiddle(cos(-2* M_PI*k/elements_per_block));
 }
@@ -195,16 +194,37 @@ void get_int(int * target, char * source, char option){
     }
 }
 
+void print_help_text(){
+    printf("This Program is designed to assist in creating an implementation of a fixpoint FFT on a FPGA for SNS.\n\n");
+    printf("As input a file, containing two integer signals, seperated by whitespace should be provided.\n");
+    printf(" The first line of the input file is skipped.\n\n");
+    printf("-h or -? to display this text.\n");
+    printf("-b: takes one positional integer argument, which specifies the width in bits of the input, intermediate values and result\n");
+    printf("-n: takes one positional integer argumemt, which specifies the number of bursts (frames), used in the postprocessing\n");
+    printf("-t: takes one positional integer argument, which specifies the width in bits of the twiddle factor.\n");
+    printf("-e: takes no argument. Enables error mode, comparison to gsl library fft.\n");
+    printf("-p: takes no argument. Enables printing of FFT result. Recomended only with low amount of input for the FFT\n\n");
+    printf("Any argument is neither starting with \"-\" nor consumed as argument for another option, is considered the input file.\n");
+    printf(" If there are multiple input files only the last one is used.\n");
+    return;
+}
 
 int main(int argc, char *argv[]){
     int number_of_bursts = 1;
     char * input_file;
     int print_mode = 0;
+    int print_help = 0;
 
     for(int i = 1; i < argc; i++){
         if(*(argv[i]) == '-'){
             
             switch(argv[i][1]){
+                case 'h':
+                    print_help = 1;
+                    break;
+                case '?':
+                    print_help = 1;
+                    break;
                 case 'n':
                     if(i+1>=argc){
                         if(verbose) printf("Option -n requires a positional integer argument");
@@ -244,13 +264,17 @@ int main(int argc, char *argv[]){
             input_file = argv[i];
         }
     }
+    if(print_help){
+        print_help_text();
+        exit(EXIT_SUCCESS);
+    }
     if(error_mode && (number_of_bursts != 1)){
         if(verbose) printf("In error_mode number of bursts need to be 1.\nDefaulting number of bursts to 1.\n");
         number_of_bursts = 1;
     }
     komma_pos = total_bits - 13;
 
-    length = 1 << 14;
+    length = 1 << 3;
     int divisor = length;
     n = -1;
     while(divisor){
@@ -295,7 +319,8 @@ int main(int argc, char *argv[]){
         radix2_fft(sensor1[0]);
         radix2_fft(sensor2[0]);
         for(int i = 0; i< length; i++){
-            printf("%f + %fi ,",unfix(*(sensor1[0]+real(i))), unfix(*(sensor1[0]+imag(i))));
+            int ri = lookup(i);
+            printf("%f + %fi ,",unfix(*(sensor1[0]+real(ri))), unfix(*(sensor1[0]+imag(ri))));
         }
         printf("\n");
     }
