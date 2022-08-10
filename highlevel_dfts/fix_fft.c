@@ -13,7 +13,7 @@ int twiddle_bits = 32;
 int do_round = 0;           
 
 
-int n;
+int n = 15;
 int length;
 
 int had_overflow = 0;
@@ -199,11 +199,16 @@ void print_help_text(){
     printf("As input a file, containing two integer signals, seperated by whitespace should be provided.\n");
     printf(" The first line of the input file is skipped.\n\n");
     printf("-h or -? to display this text.\n");
-    printf("-b: takes one positional integer argument, which specifies the width in bits of the input, intermediate values and result\n");
-    printf("-n: takes one positional integer argumemt, which specifies the number of bursts (frames), used in the postprocessing\n");
-    printf("-t: takes one positional integer argument, which specifies the width in bits of the twiddle factor.\n");
+    printf("-b: takes 1 positional integer argument, which specifies the width in bits of the input, intermediate values and result\n");
+    printf("  default : 32\n");
+    printf("-n: takes 1 positional integer argumemt, which specifies the number of bursts (frames), used in the postprocessing\n");
+    printf("  default : 1\n");
+    printf("-t: takes 1 positional integer argument, which specifies the width in bits of the twiddle factor.\n");
+    printf("  default : 32\n");
     printf("-e: takes no argument. Enables error mode, comparison to gsl library fft.\n");
     printf("-p: takes no argument. Enables printing of FFT result. Recomended only with low amount of input for the FFT\n\n");
+    printf("-l: takes 1 positional integer argument, which specifies the length of one burst as 2^l.\n");
+    printf("  default : 15\n");
     printf("Any argument is neither starting with \"-\" nor consumed as argument for another option, is considered the input file.\n");
     printf(" If there are multiple input files only the last one is used.\n");
     return;
@@ -241,6 +246,14 @@ int main(int argc, char *argv[]){
                     get_int(&total_bits, argv[i+1], 'b');
                     i++;
                     break;
+                case 'l':
+                    if(i+1>=argc){
+                        if(verbose) printf("Option -l requires a positional integer argument");
+                        exit(EXIT_FAILURE);
+                    }
+                    get_int(&n, argv[i+1], 'l');
+                    i++;
+                    break;
                 case 't':
                     if(i+1>=argc){
                         if(verbose) printf("Option -t requires a positional integer argument");
@@ -274,13 +287,7 @@ int main(int argc, char *argv[]){
     }
     komma_pos = total_bits - 13;
 
-    length = 1 << 3;
-    int divisor = length;
-    n = -1;
-    while(divisor){
-        divisor /= 2;
-        n++;
-    }  
+    length = 1 << n;
     short * sensor1[number_of_bursts];
     short * sensor2[number_of_bursts];
     for(int i = 0; i < number_of_bursts; i++){
