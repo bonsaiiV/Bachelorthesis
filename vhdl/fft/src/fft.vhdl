@@ -3,8 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity fft is
-    generic(N : integer;
-            width, width_twiddle : integer);
+    generic(N : integer := 3;
+            width : integer := 8; 
+            width_twiddle : integer := 6);
     port (
         clk, fft_start : in std_logic;
         fft_done : out std_logic;
