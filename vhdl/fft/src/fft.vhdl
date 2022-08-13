@@ -8,8 +8,9 @@ entity fft is
             width_twiddle : integer := 6);
     port (
         clk, fft_start : in std_logic;
-        fft_done : out std_logic;
-        inA, inB : std_logic_vector(2*width-1 downto 0);
+        output_valid : out std_logic;
+        inA, inB : in std_logic_vector(2*width-1 downto 0);
+        outA, outB: out std_logic_vector(2*width-1 downto 0)
         test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0)
     );
 end fft;
@@ -29,6 +30,7 @@ architecture fft_b of fft is
     signal addr_A_read, addr_B_read, addr_A_write, addr_B_write: std_logic_vector(N-1 downto 0);
     signal write_A_enable, write_B_enable: std_logic;
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-1 downto 0);
+    signal generate_output: std_logic;
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -76,7 +78,7 @@ begin
         addr_B_read => addr_B_read,
         addr_A_write => addr_A_write,
         addr_B_write => addr_B_write,
-        fft_done => fft_done,
+        generate_output => generate_output,
         write_A_enable => write_A_enable,
         write_B_enable => write_B_enable,
         get_input => get_input
@@ -130,6 +132,9 @@ begin
     );
     write_A <= bfu_A when get_input = '0' else inA;
     write_B <= bfu_B when get_input = '0' else inB;
+    output_valid <= generate_output;
+    outA <= bfu_A;
+    outB <= bfu_B;
     write_A_addr <= addr_A_write(0)&addr_A_write(1)&addr_A_write(2) when get_input = '0' else addr_A_write;
     write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2) when get_input = '0' else addr_B_write;
     read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2) when get_input = '0' else addr_A_read;
