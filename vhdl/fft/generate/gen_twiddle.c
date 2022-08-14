@@ -2,6 +2,28 @@
 #include <stdio.h>
 #include <math.h>
 
+char * first_part = 
+        "library ieee;\n"
+        "use ieee.std_logic_1164.all;\n"
+        "use ieee.numeric_std.all;\n"
+        "entity rom is\n"
+        "    generic(\n"
+        "        width :integer:=12;\n"
+        "        length :integer\n"
+        "    ) ;\n"
+        "    port (\n"
+        "        addr: in std_logic_vector(length-1 downto 0);\n"
+        "        value: out std_logic_vector(width-1 downto 0)\n"
+        "    );\n"
+        "end rom;\n"
+        "architecture rom_b of rom is\n"
+        "    type MEMORY is array(0 to 2**length-1) of std_logic_vector(width-1 downto 0);\n"
+        "    (* rom_style = \"block\"*)signal rom_mem :MEMORY :=(\n";
+char * second_part =
+        ");\n"
+        "begin\n"
+        "    value <= rom_mem(to_integer(unsigned(addr)));\n"
+        "end rom_b;\n";
 
 double get_twiddle_real(int n, int i){
     return cos(-2* M_PI*i/(1<<n));
@@ -19,7 +41,7 @@ int generate_twiddle(int n, int bits, char * ret){
     __int32_t real_twiddle_int;
     __int32_t imag_twiddle_int;
     int l_word = (2*bits+3); // 2 numbers with size = bits + leading '"', closing '"' and ','
-    for (int i = 0; i < (1 << n); i++)
+    for (int i = 0; i < 1 << (n-1); i++)
     {
         ret[i*l_word] = '"';
         real_twiddle_int = ffix(get_twiddle_real(n,i), bits-2);
@@ -34,7 +56,7 @@ int generate_twiddle(int n, int bits, char * ret){
         ret[i*l_word+2*bits+1] = '"';
         ret[i*l_word+2*bits+2] = ',';
     }
-    ret[(1<<n)*(2*bits+3)-1] = '\0';
+    ret[(1<<(n-1))*(2*bits+3)-1] = '\0';
     
 }
 
@@ -82,9 +104,10 @@ int main(int argc, char * argv[]){
             output_file = argv[i];
         }
     }
-    char * ret = malloc( sizeof(char) * (1<<fft_length) * (2*bits+3));
+    char * ret = malloc( sizeof(char) * (1<<(fft_length-1)) * (2*bits+3));
     generate_twiddle(fft_length, bits, ret);
-    printf("%s\n",ret);
+
+    printf("%s%s%s",first_part,ret,second_part);
     free(ret);
     
 }
