@@ -10,15 +10,15 @@ architecture test of fft_tb is
             width, width_twiddle : integer);
     port (
        clk, fft_start: in std_logic;
-       fft_done : out std_logic;
+       output_valid : out std_logic;
        inA, inB : std_logic_vector(2*width-1 downto 0);
-       test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0)
+       outA, outB: std_logic_vector(2*width-1 downto 0)
     );
     end component;
     signal clk, fft_start : std_logic := '0';
     signal inA, inB : std_logic_vector(15 downto 0) := (others =>'0');
-    signal fft_done : std_logic;
-    signal test0, test1, test2, test3, test4, test5, test6, test7 : std_logic_vector(15 downto 0);
+    signal output_valid : std_logic;
+    signal outA, outB : std_logic_vector(15 downto 0);
 begin
     fft_i: fft
     generic map (
@@ -32,14 +32,8 @@ begin
         inA => inA,
         inB => inB,
         fft_done => fft_done,
-        test0 => test0,
-        test1 => test1,
-        test2 => test2,
-        test3 => test3,
-        test4 => test4,
-        test5 => test5,
-        test6 => test6,
-        test7 => test7
+        outA => outA,
+        outB => outB
     );
     process begin
         
@@ -71,7 +65,7 @@ begin
         inA <= x"00F7";
         inB <= x"00F0";
         --for i in 0 to 25 loop
-        while fft_done = '0' loop
+        while output_valid = '0' loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
