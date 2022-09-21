@@ -1,11 +1,12 @@
 #test data
 *.dat
+test.txt
 
 #compiled/output files
-*.o
-dft
-!/dft/
-fix_fft
-!/fix_fft/
 *.cf
 *.vcd
+bin/
+
+#vscode
+.vscode
+*.code-workspace
