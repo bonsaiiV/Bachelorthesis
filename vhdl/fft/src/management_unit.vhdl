@@ -53,7 +53,7 @@ begin
         port map(
             enable => layer_incr_enable,
             clr => fft_finished,
-            clk => index_resets,
+            clk => clk,
             value => layer,
             resets => fft_finished
         );

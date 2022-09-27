@@ -7,14 +7,14 @@ entity c_mult is
     port    (clk: in std_logic;
              A_real, A_imag: in  signed(width_A-1 downto 0);
              B_real, B_imag: in  signed(width_B-1 downto 0);
-             C_real, C_imag: out signed(width_A-1 downto 0));
+             C_real, C_imag: out signed(width_A-1 downto 0) := (others => '0'));
 end c_mult;
 
 architecture c_mult_b of c_mult is
-    signal tmp_real0 : signed(width_A+width_B-1 downto 0);
-    signal tmp_real1 : signed(width_A+width_B-1 downto 0);
-    signal tmp_imag0 : signed(width_A+width_B-1 downto 0);
-    signal tmp_imag1 : signed(width_A+width_B-1 downto 0);
+    signal tmp_real0 : signed(width_A+width_B-1 downto 0) := (others => '0');
+    signal tmp_real1 : signed(width_A+width_B-1 downto 0) := (others => '0');
+    signal tmp_imag0 : signed(width_A+width_B-1 downto 0) := (others => '0');
+    signal tmp_imag1 : signed(width_A+width_B-1 downto 0) := (others => '0');
 
 begin
     process(clk)

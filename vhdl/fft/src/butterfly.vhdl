@@ -8,7 +8,7 @@ entity butterfly is
     port(   clk : in std_logic;
             inA, inB   : in  std_logic_vector(2*width_A-1 downto 0);
             twiddle    : in  std_logic_vector(2*width_twiddle-1 downto 0);
-            outA, outB : out std_logic_vector(2*width_A-1 downto 0));
+            outA, outB : out std_logic_vector(2*width_A-1 downto 0) := (others => '0'));
 end butterfly;
 
 

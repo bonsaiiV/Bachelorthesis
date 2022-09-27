@@ -10,7 +10,7 @@ entity fft is
         clk, fft_start : in std_logic;
         output_valid : out std_logic;
         inA, inB : in std_logic_vector(2*width-1 downto 0);
-        outA, outB: out std_logic_vector(2*width-1 downto 0) := (others => '0')
+        outA, outB: out std_logic_vector(2*width-1 downto 0)
     );
 end fft;
 
@@ -58,7 +58,7 @@ architecture fft_b of fft is
         port(write_addr_A, write_addr_B: in std_logic_vector(length-1 downto 0);
              write_A, write_B: in std_logic_vector(width-1 downto 0);
              write_enable_A, write_enable_B, clk: in std_logic;
-             read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
+             read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0) := (others => '0');
              read_A, read_B: out std_logic_vector(width-1 downto 0));
     end component;
     component rom

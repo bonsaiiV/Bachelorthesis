@@ -11,8 +11,8 @@ architecture test of fft_tb is
     port (
        clk, fft_start: in std_logic;
        output_valid : out std_logic;
-       inA, inB : std_logic_vector(2*width-1 downto 0);
-       outA, outB: std_logic_vector(2*width-1 downto 0)
+       inA, inB : in std_logic_vector(2*width-1 downto 0);
+       outA, outB: out std_logic_vector(2*width-1 downto 0)
     );
     end component;
     signal clk, fft_start : std_logic := '0';
@@ -31,7 +31,7 @@ begin
         fft_start => fft_start,
         inA => inA,
         inB => inB,
-        fft_done => fft_done,
+        output_valid => output_valid,
         outA => outA,
         outB => outB
     );
@@ -46,26 +46,38 @@ begin
         fft_start <= '1';
         wait for 1 ns;
         fft_start <= '0';
-        wait for 1 ns;
-        clk <= '1';
-        wait for 1 ns;
-        clk <= '0';
+        for i in 0 to 3 loop
+            wait for 1 ns;
+            clk <= '1';
+            wait for 1 ns;
+            clk <= '0';
+        end loop;
         inA <= x"0009";
         inB <= x"0010";
-        wait for 1 ns;
-        clk <= '1';
-        wait for 1 ns;
-        clk <= '0';
+        for i in 0 to 3 loop
+            wait for 1 ns;
+            clk <= '1';
+            wait for 1 ns;
+            clk <= '0';
+        end loop;
         inA <= x"00FF";
         inB <= x"00FC";
-        wait for 1 ns;
-        clk <= '1';
-        wait for 1 ns;
-        clk <= '0';
+        for i in 0 to 3 loop
+            wait for 1 ns;
+            clk <= '1';
+            wait for 1 ns;
+            clk <= '0';
+        end loop;
         inA <= x"00F7";
         inB <= x"00F0";
         --for i in 0 to 25 loop
         while output_valid = '0' loop
+            wait for 1 ns;
+            clk <= '1';
+            wait for 1 ns;
+            clk <= '0';
+        end loop;
+        for i in 0 to 8 loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
