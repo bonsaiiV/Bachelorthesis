@@ -1,0 +1,3 @@
+#!/bin/bash -
+
+./do src/c_mult.vhdl src/butterfly.vhdl src/rom.vhdl src/ram.vhdl src/counter.vhdl src/management_unit.vhdl src/fft.vhdl test/fft_tb.vhdl
