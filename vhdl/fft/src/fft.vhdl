@@ -10,12 +10,18 @@ entity fft is
         clk, fft_start : in std_logic;
         output_valid : out std_logic;
         inA, inB : in std_logic_vector(2*width-1 downto 0);
-        outA, outB: out std_logic_vector(2*width-1 downto 0)
-        test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0)
+        outA, outB: out std_logic_vector(2*width-1 downto 0) := (others => '0')
     );
 end fft;
 
 architecture fft_b of fft is
+    component counter
+        generic (count_width : integer; max : integer);
+        port(enable, clk : in std_logic;
+             clr : in std_logic;
+             value : out std_logic_vector(count_width-1 downto 0);
+             resets : out std_logic);
+    end component;
     component management_unit
     generic(
         N: integer;
@@ -23,7 +29,7 @@ architecture fft_b of fft is
     port(fft_start, clk: in std_logic;
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
-        fft_done, write_A_enable, write_B_enable: out std_logic;
+        generate_output, write_A_enable, write_B_enable: out std_logic;
         get_input: out std_logic);
     end component;
     signal twiddle_addr: std_logic_vector(N-2 downto 0);
@@ -31,10 +37,12 @@ architecture fft_b of fft is
     signal write_A_enable, write_B_enable: std_logic;
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-1 downto 0);
     signal generate_output: std_logic;
+    signal mu_clk: std_logic;
 
     component butterfly
     generic(width_A, width_twiddle : integer);
-    port(   inA, inB     : in  std_logic_vector(width_A*2-1 downto 0);
+    port(   clk : in std_logic;
+            inA, inB     : in  std_logic_vector(width_A*2-1 downto 0);
             twiddle : in  std_logic_vector(width_twiddle*2-1 downto 0);
             outA, outB : out std_logic_vector(width_A*2-1 downto 0));
     end component;
@@ -51,8 +59,7 @@ architecture fft_b of fft is
              write_A, write_B: in std_logic_vector(width-1 downto 0);
              write_enable_A, write_enable_B, clk: in std_logic;
              read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0);
-             read_A, read_B: out std_logic_vector(width-1 downto 0);
-             test0, test1, test2, test3, test4, test5, test6, test7 : out std_logic_vector(15 downto 0));
+             read_A, read_B: out std_logic_vector(width-1 downto 0));
     end component;
     component rom
     generic(
@@ -65,6 +72,13 @@ architecture fft_b of fft is
     );
     end component;
 begin
+    mu_clk_divider: counter
+        generic map (count_width => 3,
+                     max => 3)
+        port map(enable => '1',
+                 clr => '0',
+                 clk => clk,
+                 resets => mu_clk);
     mu: management_unit
     generic map (
         N => N,
@@ -72,7 +86,7 @@ begin
     )
     port map (
         fft_start => fft_start,
-        clk => clk,
+        clk => mu_clk,
         twiddle_addr => twiddle_addr,
         addr_A_read => addr_A_read,
         addr_B_read => addr_B_read,
@@ -89,6 +103,7 @@ begin
         width_twiddle => width_twiddle
     )
     port map(
+        clk => clk,
         inA => read_A,
         outA => bfu_A,
         twiddle => twiddle,
@@ -111,15 +126,7 @@ begin
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
         read_A => read_A, 
-        read_B => read_B,
-        test0 => test0,
-        test1 => test1,
-        test2 => test2,
-        test3 => test3,
-        test4 => test4,
-        test5 => test5,
-        test6 => test6,
-        test7 => test7
+        read_B => read_B
     );
     twiddle_rom: rom
     generic map (

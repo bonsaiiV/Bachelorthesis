@@ -5,7 +5,8 @@ use ieee.numeric_std.all;
 
 entity butterfly is 
     generic(width_A, width_twiddle : integer);
-    port(   inA, inB   : in  std_logic_vector(2*width_A-1 downto 0);
+    port(   clk : in std_logic;
+            inA, inB   : in  std_logic_vector(2*width_A-1 downto 0);
             twiddle    : in  std_logic_vector(2*width_twiddle-1 downto 0);
             outA, outB : out std_logic_vector(2*width_A-1 downto 0));
 end butterfly;
@@ -14,7 +15,8 @@ end butterfly;
 architecture butterfly_b of butterfly is
     component c_mult
         generic (width_A, width_B: integer);
-        port    (A_real, A_imag: in  signed(width_A-1 downto 0);
+        port    (clk : in std_logic;
+                 A_real, A_imag: in  signed(width_A-1 downto 0);
                  B_real, B_imag: in  signed(width_B-1 downto 0);
                  C_real, C_imag: out signed(width_A-1 downto 0));
     end component;
@@ -29,6 +31,7 @@ begin
             width_B => width_twiddle
         )
         port map(
+            clk    => clk,
             A_real => inB_real,
             A_imag => inB_imag,
             B_real => twiddle_real,
@@ -42,11 +45,20 @@ begin
     inB_imag <= signed(inB(2*width_A-1 downto width_A));
     twiddle_real <= signed(twiddle(width_twiddle-1 downto 0));
     twiddle_imag <= signed(twiddle(2*width_twiddle-1 downto width_twiddle));
-    outA_real_buf <= inA_real + tmp_real;
-    outA_imag_buf <= inA_imag + tmp_imag;
-    outB_real_buf <= inA_real - tmp_real;
-    outB_imag_buf <= inA_imag - tmp_imag;
-
-    outA <= std_logic_vector(outA_imag_buf(width_A-1)& outA_imag_buf(width_A-1 downto 1)& outA_real_buf(width_A-1)& outA_real_buf(width_A-1 downto 1));
-    outB <= std_logic_vector(outB_imag_buf(width_A-1)& outB_imag_buf(width_A-1 downto 1)& outB_real_buf(width_A-1)& outB_real_buf(width_A-1 downto 1));
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            outA_real_buf <= inA_real + tmp_real;
+            outA_imag_buf <= inA_imag + tmp_imag;
+            outB_real_buf <= inA_real - tmp_real;
+            outB_imag_buf <= inA_imag - tmp_imag;
+        end if;
+    end process;
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            outA <= std_logic_vector(outA_imag_buf(width_A-1)& outA_imag_buf(width_A-1 downto 1)& outA_real_buf(width_A-1)& outA_real_buf(width_A-1 downto 1));
+            outB <= std_logic_vector(outB_imag_buf(width_A-1)& outB_imag_buf(width_A-1 downto 1)& outB_real_buf(width_A-1)& outB_real_buf(width_A-1 downto 1));
+        end if;
+    end process;
 end butterfly_b;

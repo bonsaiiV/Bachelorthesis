@@ -5,27 +5,29 @@ use ieee.numeric_std.all;
 entity management_unit is
     generic(
             N: integer;
-            layer_l: integer);
+            layer_l: integer;
+            n_parallel: integer:=0);
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
-         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
+         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
          generate_output, write_A_enable, write_B_enable: out std_logic;
-         get_input: out std_logic);
+         get_input: out std_logic;
+         merge_step: out std_logic_vector(n_parallel-1 downto 0));
 end management_unit;
 
 architecture management_unit_b of management_unit is
     component counter
         generic (count_width : integer; max : integer);
-        port(clk : in std_logic;
+        port(enable, clk : in std_logic;
              clr : in std_logic;
              value : out std_logic_vector(count_width-1 downto 0);
              resets : out std_logic);
     end component;
 
     signal is_getting_input : std_logic:= '1';
-    signal layer_incr, layer_incr_buff : std_logic:='0';
+    signal layer_incr, layer_incr_enable : std_logic:='0';
     signal fft_finished: std_logic:='1'; -- internal impulse to end calculation 
-    signal index_resets, fft_running, active_clk: std_logic := '0';
+    signal index_resets, fft_running: std_logic := '0';
     signal index: std_logic_vector(N-2 downto 0);
     signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
@@ -37,8 +39,9 @@ begin
             max => 2**(N-1)-1
         )
         port map(
+            enable => fft_running,
             clr => fft_finished,
-            clk => active_clk,
+            clk => clk,
             value => index,
             resets => index_resets
         );
@@ -48,11 +51,13 @@ begin
             max => n-1
         )
         port map(
+            enable => layer_incr_enable,
             clr => fft_finished,
-            clk => layer_incr,
+            clk => index_resets,
             value => layer,
             resets => fft_finished
         );
+    
     process(fft_start, fft_finished) 
     begin
         if(fft_start = '1') then
@@ -61,18 +66,11 @@ begin
             fft_running <= '0';
         end if;
     end process;
-    fft_done <= not fft_running;
-    active_clk <= fft_running and clk;
+    generate_output <= '1' when to_integer(unsigned(layer)) = n-2 else '0';
     process(clk)
     begin
         if(rising_edge(clk)) then
-            layer_incr <= index_resets and layer_incr_buff;
-        end if;
-    end process;
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            layer_incr_buff <= not is_getting_input;
+            layer_incr_enable <= not is_getting_input;
         end if;
     end process;
     process(fft_finished, index_resets)
