@@ -8,7 +8,7 @@ entity fft is
             width_twiddle : integer := 6);
     port (
         clk, fft_start : in std_logic;
-        output_valid : out std_logic;
+        output_valid : out std_logic := '0';
         inA, inB : in std_logic_vector(2*width-1 downto 0);
         outA, outB: out std_logic_vector(2*width-1 downto 0)
     );
@@ -38,6 +38,7 @@ architecture fft_b of fft is
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-1 downto 0);
     signal generate_output: std_logic;
     signal mu_clk: std_logic;
+    signal output_valid_buff1, output_valid_buff2: std_logic := '0';
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -73,8 +74,8 @@ architecture fft_b of fft is
     end component;
 begin
     mu_clk_divider: counter
-        generic map (count_width => 3,
-                     max => 3)
+        generic map (count_width => 2,
+                     max => 1)
         port map(enable => '1',
                  clr => '0',
                  clk => clk,
@@ -86,7 +87,7 @@ begin
     )
     port map (
         fft_start => fft_start,
-        clk => mu_clk,
+        clk => clk,
         twiddle_addr => twiddle_addr,
         addr_A_read => addr_A_read,
         addr_B_read => addr_B_read,
@@ -137,11 +138,26 @@ begin
         addr => twiddle_addr,
         value => twiddle
     );
+
+
     write_A <= bfu_A when get_input = '0' else inA;
     write_B <= bfu_B when get_input = '0' else inB;
-    output_valid <= generate_output;
     outA <= bfu_A;
     outB <= bfu_B;
+
+    --output valid need to be delayed, since it raises once the last cycle starts and not when the first element of it finishes
+    output_valid_buff1 <= generate_output;
+    process(clk)
+    begin
+        if (rising_edge(clk)) then
+            output_valid <= output_valid_buff2;
+            output_valid_buff2 <= output_valid_buff1;
+        end if;
+    end process;
+
+    
+
+    --reverse addresses for input to make it natural ordered
     write_A_addr <= addr_A_write(0)&addr_A_write(1)&addr_A_write(2) when get_input = '0' else addr_A_write;
     write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2) when get_input = '0' else addr_B_write;
     read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2) when get_input = '0' else addr_A_read;

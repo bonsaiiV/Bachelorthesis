@@ -9,7 +9,7 @@ entity management_unit is
             n_parallel: integer:=0);
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
-         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
+         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
          generate_output, write_A_enable, write_B_enable: out std_logic;
          get_input: out std_logic;
          merge_step: out std_logic_vector(n_parallel-1 downto 0));
@@ -24,13 +24,14 @@ architecture management_unit_b of management_unit is
              resets : out std_logic);
     end component;
 
-    signal is_getting_input : std_logic:= '1';
+    signal is_getting_input, is_getting_input_buff1, is_getting_input_buff2 : std_logic:= '1';
     signal layer_incr, layer_incr_enable : std_logic:='0';
     signal fft_finished: std_logic:='1'; -- internal impulse to end calculation 
     signal index_resets, fft_running: std_logic := '0';
     signal index: std_logic_vector(N-2 downto 0);
     signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
+    signal addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-n_parallel-1 downto 0);
     signal tmp_mask, constant_mask: std_logic_vector(N-1 downto 0) := ('1', others => '0');
 begin
     Index_cnt: counter
@@ -53,7 +54,7 @@ begin
         port map(
             enable => layer_incr_enable,
             clr => fft_finished,
-            clk => clk,
+            clk => index_resets,
             value => layer,
             resets => fft_finished
         );
@@ -66,7 +67,7 @@ begin
             fft_running <= '0';
         end if;
     end process;
-    generate_output <= '1' when to_integer(unsigned(layer)) = n-2 else '0';
+    generate_output <= '1' when to_integer(unsigned(layer)) = n-1 else '0';
     process(clk)
     begin
         if(rising_edge(clk)) then
@@ -81,13 +82,31 @@ begin
             is_getting_input <= '0';
         end if;
     end process;
+
     addr_A_read <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
     addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
-    addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
-    addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
+
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            -- this buffer is important to complete calculations correctly
+            is_getting_input_buff1 <= is_getting_input;
+            is_getting_input_buff2 <= is_getting_input_buff1;
+
+            addr_A_write_buff2 <= addr_A_write_buff1;
+            addr_B_write_buff2 <= addr_B_write_buff1;
+
+            addr_A_write_buff1 <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
+            addr_B_write_buff1 <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
+        end if;
+    end process;
+    addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_A_write_buff2;
+    addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_B_write_buff2;
+
     get_input <= is_getting_input;
     write_A_enable <= fft_running;
     write_b_enable <= fft_running;
+
     twiddle_addr <= index and twiddle_mask(N-2 downto 0);
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 

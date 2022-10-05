@@ -46,7 +46,7 @@ begin
         fft_start <= '1';
         wait for 1 ns;
         fft_start <= '0';
-        for i in 0 to 3 loop
+        for i in 0 to 0 loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
@@ -54,7 +54,7 @@ begin
         end loop;
         inA <= x"0009";
         inB <= x"0010";
-        for i in 0 to 3 loop
+        for i in 0 to 0 loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
@@ -62,7 +62,7 @@ begin
         end loop;
         inA <= x"00FF";
         inB <= x"00FC";
-        for i in 0 to 3 loop
+        for i in 0 to 0 loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
@@ -77,7 +77,7 @@ begin
             wait for 1 ns;
             clk <= '0';
         end loop;
-        for i in 0 to 8 loop
+        for i in 0 to 16 loop
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
