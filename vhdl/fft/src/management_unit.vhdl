@@ -6,7 +6,7 @@ entity management_unit is
     generic(
             N: integer;
             layer_l: integer;
-            n_parallel: integer:=0);
+            n_parallel: integer:=0); --amount of splits in paths of fft
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
@@ -24,20 +24,37 @@ architecture management_unit_b of management_unit is
              resets : out std_logic);
     end component;
 
+    signal chunk: std_logic_vector(n_parallel downto 0);
     signal is_getting_input, is_getting_input_buff1, is_getting_input_buff2 : std_logic:= '1';
     signal layer_incr, layer_incr_enable : std_logic:='0';
     signal fft_finished: std_logic:='1'; -- internal impulse to end calculation 
-    signal index_resets, fft_running: std_logic := '0';
-    signal index: std_logic_vector(N-2 downto 0);
-    signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
+    signal io_done, index_resets, fft_running: std_logic := '0';
+    signal index: std_logic_vector(N-n_parallel-2 downto 0);
+    signal twiddle_mask: std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
     signal addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-n_parallel-1 downto 0);
-    signal tmp_mask, constant_mask: std_logic_vector(N-1 downto 0) := ('1', others => '0');
+    signal tmp_mask, constant_mask: std_logic_vector(N-n_parallel-1 downto 0) := ('1', others => '0');
 begin
+    --this counter is for IO:
+    --since the index doesn't iterate over N/2 anymore (instead N/(2*2^n_parallel))
+    --this is because there are 2^n_parallel butterfly units, each acting on 2 elemnts
+    --io hoever stays on 2 wires, so it needs 2^n_parallel iterations
+    IO_Chunk_cnt: counter
+        generic map (
+            count_width => n_parallel+1,
+            max => 2**(n_parallel)-1
+        )
+        port map (
+            enable => is_getting_input,
+            clr => fft_finished,
+            clk => index_resets,
+            value => chunk,
+            resets => io_done
+        );
     Index_cnt: counter
         generic map (
-            count_width => N-1,
-            max => 2**(N-1)-1
+            count_width => N-n_parallel-1,
+            max => 2**(N-n_parallel-1)-1
         )
         port map(
             enable => fft_running,
@@ -46,7 +63,7 @@ begin
             value => index,
             resets => index_resets
         );
-    LayerNr: counter
+    Layer_cnt: counter
         generic map (
             count_width => layer_l,
             max => n-1
@@ -78,7 +95,7 @@ begin
     begin
         if(fft_finished = '1') then
             is_getting_input <= '1';
-        elsif(index_resets = '1') then
+        elsif(io_done = '1') then
             is_getting_input <= '0';
         end if;
     end process;
@@ -107,7 +124,7 @@ begin
     write_A_enable <= fft_running;
     write_b_enable <= fft_running;
 
-    twiddle_addr <= index and twiddle_mask(N-2 downto 0);
+    twiddle_addr <= '0' & (index and twiddle_mask(N-n_parallel-2 downto 0));
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;

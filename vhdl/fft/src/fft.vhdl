@@ -5,7 +5,8 @@ use ieee.numeric_std.all;
 entity fft is
     generic(N : integer := 3;
             width : integer := 8; 
-            width_twiddle : integer := 6);
+            width_twiddle : integer := 6;
+            n_parallel : integer := 1);
     port (
         clk, fft_start : in std_logic;
         output_valid : out std_logic := '0';
@@ -18,20 +19,21 @@ architecture fft_b of fft is
     component management_unit
     generic(
         N: integer;
-        layer_l: integer);
+        layer_l: integer;
+        n_parallel: integer);
     port(fft_start, clk: in std_logic;
         twiddle_addr: out std_logic_vector(N-2 downto 0);
-        addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-1 downto 0);
+        addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
         generate_output, write_A_enable, write_B_enable: out std_logic;
         get_input: out std_logic);
     end component;
     signal twiddle_addr: std_logic_vector(N-2 downto 0);
-    signal addr_A_read, addr_B_read, addr_A_write, addr_B_write: std_logic_vector(N-1 downto 0);
+    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
     signal write_A_enable, write_B_enable: std_logic;
-    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-1 downto 0);
     signal generate_output: std_logic;
     signal mu_clk: std_logic;
     signal output_valid_buff1, output_valid_buff2: std_logic := '0';
+    signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -42,8 +44,6 @@ architecture fft_b of fft is
     end component;
 
     signal twiddle: std_logic_vector(2*width_twiddle-1 downto 0);
-    signal bfu_A, bfu_B : std_logic_vector(2*width-1 downto 0);
-    signal read_A, read_B, write_A, write_B: std_logic_vector(2*width-1 downto 0);
     signal get_input: std_logic;
 
     component ram
@@ -65,55 +65,95 @@ architecture fft_b of fft is
         value: out std_logic_vector(width-1 downto 0)
     );
     end component;
+
+    --signals, that need to me multiplied for new paths
+    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
+    signal bfu_A1, bfu_B1 : std_logic_vector(2*width-1 downto 0);
+    signal bfu_A2, bfu_B2 : std_logic_vector(2*width-1 downto 0);
+    signal read_A1, read_B1, write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
+    signal read_A2, read_B2, write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
+
 begin
     mu: management_unit
     generic map (
         N => N,
-        layer_l => 2
+        layer_l => 2,
+        n_parallel => n_parallel
     )
     port map (
         fft_start => fft_start,
         clk => clk,
         twiddle_addr => twiddle_addr,
-        addr_A_read => addr_A_read,
-        addr_B_read => addr_B_read,
-        addr_A_write => addr_A_write,
-        addr_B_write => addr_B_write,
+        addr_A_read => addr_A_read_buff,
+        addr_B_read => addr_B_read_buff,
+        addr_A_write => addr_A_write_buff,
+        addr_B_write => addr_B_write_buff,
         generate_output => generate_output,
         write_A_enable => write_A_enable,
         write_B_enable => write_B_enable,
         get_input => get_input
     );
-    bfu: butterfly
+    bfu1: butterfly
     generic map(
         width_A => width,
         width_twiddle => width_twiddle
     )
     port map(
         clk => clk,
-        inA => read_A,
-        outA => bfu_A,
+        inA => read_A1,
+        outA => bfu_A1,
         twiddle => twiddle,
-        inB => read_B,
-        outB => bfu_B
+        inB => read_B1,
+        outB => bfu_B1
     );
-    ram_real: ram
+    ram1: ram
     generic map (
         width => 2*width,
-        length => N
+        length => N-n_parallel
     )
     port map(
         write_addr_A => write_A_addr,
         write_addr_B => write_B_addr,
-        write_A => write_A, 
-        write_B => write_B,
+        write_A => write_A1, 
+        write_B => write_B1,
         write_enable_A => write_A_enable, 
         write_enable_B => write_B_enable,
         clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
-        read_A => read_A, 
-        read_B => read_B
+        read_A => read_A1, 
+        read_B => read_B1
+    );
+    bfu2: butterfly
+    generic map(
+        width_A => width,
+        width_twiddle => width_twiddle
+    )
+    port map(
+        clk => clk,
+        inA => read_A2,
+        outA => bfu_A2,
+        twiddle => twiddle,
+        inB => read_B2,
+        outB => bfu_B2
+    );
+    ram2: ram
+    generic map (
+        width => 2*width,
+        length => N-n_parallel
+    )
+    port map(
+        write_addr_A => write_A_addr,
+        write_addr_B => write_B_addr,
+        write_A => write_A2, 
+        write_B => write_B2,
+        write_enable_A => write_A_enable, 
+        write_enable_B => write_B_enable,
+        clk => clk,
+        read_addr_A => read_A_addr, 
+        read_addr_B => read_B_addr,
+        read_A => read_A2, 
+        read_B => read_B2
     );
     twiddle_rom: rom
     generic map (
@@ -126,12 +166,14 @@ begin
     );
 
 
-    write_A <= bfu_A when get_input = '0' else inA;
-    write_B <= bfu_B when get_input = '0' else inB;
-    outA <= bfu_A;
-    outB <= bfu_B;
+    write_A1 <= bfu_A1 when get_input = '0' else inA;
+    write_B1 <= bfu_B1;
+    write_A2 <= bfu_A2 when get_input = '0' else inB;
+    write_B2 <= bfu_B2;
+    outA <= bfu_A1;
+    outB <= bfu_B2;
 
-    --output valid need to be delayed, since it raises once the last cycle starts and not when the first element of it finishes
+    --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes
     output_valid_buff1 <= generate_output;
     process(clk)
     begin
@@ -143,10 +185,15 @@ begin
 
     
 
-    --reverse addresses for input to make it natural ordered
-    write_A_addr <= addr_A_write(0)&addr_A_write(1)&addr_A_write(2) when get_input = '0' else addr_A_write;
-    write_B_addr <= addr_B_write(0)&addr_B_write(1)&addr_B_write(2) when get_input = '0' else addr_B_write;
-    read_A_addr <= addr_A_read(0)&addr_A_read(1)&addr_A_read(2) when get_input = '0' else addr_A_read;
-    read_B_addr <= addr_B_read(0)&addr_B_read(1)&addr_B_read(2) when get_input = '0' else addr_B_read;
+    --reverse addresses to simulate permutating except for input to make it natural ordered
+    --TODO maybe merge write buffering and input reversing?
+    gen_rev_addr: for i in 0 to N-n_parallel-1 generate
+        reversed_A_addr(i) <= addr_A_write_buff(N-n_parallel-i-1);
+        reversed_B_addr(i) <= addr_B_write_buff(N-n_parallel-i-1);
+        read_A_addr(i) <= addr_A_read_buff(N-n_parallel-i-1);
+        read_B_addr(i) <= addr_B_read_buff(N-n_parallel-i-1);
+    end generate;
+    write_A_addr <= reversed_A_addr when get_input = '0' else addr_A_write_buff;
+    write_B_addr <= reversed_B_addr;
     
 end fft_b;
