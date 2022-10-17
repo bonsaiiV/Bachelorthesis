@@ -15,13 +15,6 @@ entity fft is
 end fft;
 
 architecture fft_b of fft is
-    component counter
-        generic (count_width : integer; max : integer);
-        port(enable, clk : in std_logic;
-             clr : in std_logic;
-             value : out std_logic_vector(count_width-1 downto 0);
-             resets : out std_logic);
-    end component;
     component management_unit
     generic(
         N: integer;
@@ -73,13 +66,6 @@ architecture fft_b of fft is
     );
     end component;
 begin
-    mu_clk_divider: counter
-        generic map (count_width => 2,
-                     max => 1)
-        port map(enable => '1',
-                 clr => '0',
-                 clk => clk,
-                 resets => mu_clk);
     mu: management_unit
     generic map (
         N => N,
