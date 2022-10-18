@@ -86,7 +86,7 @@ int main(int argc, char * argv[]){
             switch(argv[i][1]){
                 case 'n':
                     if(i+1>=argc){
-                        if(verbose) printf("Option -n requires a positional integer argument");
+                        if(verbose) printf("Option -n requires a positional integer argument"); //n is the length of a burst
                         exit(EXIT_FAILURE);
                     }
                     get_int(&fft_length, argv[i+1], 'n');
@@ -94,7 +94,7 @@ int main(int argc, char * argv[]){
                     break;
                 case 'b':
                     if(i+1>=argc){
-                        if(verbose) printf("Option -b requires a positional integer argument");
+                        if(verbose) printf("Option -b requires a positional integer argument"); //b is the accuracy in bits of the twiddle factors: size = (2*b) as it is complex
                         exit(EXIT_FAILURE);
                     }
                     get_int(&bits, argv[i+1], 'b');
