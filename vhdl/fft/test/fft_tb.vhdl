@@ -24,7 +24,7 @@ begin
     generic map (
         width => 8,
         width_twiddle => 6,
-        N => 3
+        N => 4
     )
     port map (
         clk => clk,
@@ -46,30 +46,35 @@ begin
         fft_start <= '1';
         wait for 1 ns;
         fft_start <= '0';
-        for i in 0 to 0 loop
+        clk <= '1';
+        for i in 0 to 1 loop
+            wait for 1 ns;
+            clk <= '0';
+            inA <= x"0009";
+            inB <= x"0010";
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
             clk <= '0';
-        end loop;
-        inA <= x"0009";
-        inB <= x"0010";
-        for i in 0 to 0 loop
+            inA <= x"00FF";
+            inB <= x"00FC";
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
             clk <= '0';
-        end loop;
-        inA <= x"00FF";
-        inB <= x"00FC";
-        for i in 0 to 0 loop
+            inA <= x"00F7";
+            inB <= x"00F0";
             wait for 1 ns;
             clk <= '1';
             wait for 1 ns;
             clk <= '0';
+            inA <= x"0001";
+            inB <= x"0004";
+            wait for 1 ns;
+            clk <= '1';
         end loop;
-        inA <= x"00F7";
-        inB <= x"00F0";
+        wait for 1 ns;
+        clk <= '0';
         --for i in 0 to 25 loop
         while output_valid = '0' loop
             wait for 1 ns;
