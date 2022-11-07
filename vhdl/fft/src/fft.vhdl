@@ -25,15 +25,24 @@ architecture fft_b of fft is
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
         generate_output, write_A_enable, write_B_enable: out std_logic;
-        get_input: out std_logic);
+        get_input: out std_logic;
+        merge_step: out std_logic_vector(n_parallel-1 downto 0));
     end component;
-    signal twiddle_addr: std_logic_vector(N-2 downto 0);
     signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
     signal write_A_enable, write_B_enable: std_logic;
-    signal generate_output: std_logic;
-    signal mu_clk: std_logic;
-    signal output_valid_buff1, output_valid_buff2: std_logic := '0';
+    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
     signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
+
+    --control signals
+    signal generate_output: std_logic;
+    signal output_valid_buff1, output_valid_buff2: std_logic := '0';
+    signal merge_step: std_logic_vector(n_parallel-1 downto 0);
+
+
+    --mux are arrays used in the merge process to match the ram data to the correct bfu
+    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+    signal read_buff: MUX;
+    signal write_buff: MUX;
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -43,7 +52,10 @@ architecture fft_b of fft is
             outA, outB : out std_logic_vector(width_A*2-1 downto 0));
     end component;
 
+
+    signal twiddle_addr: std_logic_vector(N-2 downto 0);
     signal twiddle: std_logic_vector(2*width_twiddle-1 downto 0);
+
     signal get_input: std_logic;
 
     component ram
@@ -67,12 +79,11 @@ architecture fft_b of fft is
     end component;
 
     --signals, that need to me multiplied for new paths
-    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
-    signal bfu_A1, bfu_B1 : std_logic_vector(2*width-1 downto 0);
-    signal bfu_A2, bfu_B2 : std_logic_vector(2*width-1 downto 0);
-    signal read_A1, read_B1, write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
-    signal read_A2, read_B2, write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
-
+    signal bfu_out_A1, bfu_out_B1 : std_logic_vector(2*width-1 downto 0);
+    signal bfu_out_A2, bfu_out_B2 : std_logic_vector(2*width-1 downto 0);
+    signal bfu_in_A1, bfu_in_B1, write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
+    signal bfu_in_A2, bfu_in_B2, write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
+    
 begin
     mu: management_unit
     generic map (
@@ -91,7 +102,8 @@ begin
         generate_output => generate_output,
         write_A_enable => write_A_enable,
         write_B_enable => write_B_enable,
-        get_input => get_input
+        get_input => get_input,
+        merge_step => merge_step
     );
     bfu1: butterfly
     generic map(
@@ -100,11 +112,11 @@ begin
     )
     port map(
         clk => clk,
-        inA => read_A1,
-        outA => bfu_A1,
+        inA => bfu_in_A1,
+        outA => bfu_out_A1,
         twiddle => twiddle,
-        inB => read_B1,
-        outB => bfu_B1
+        inB => bfu_in_B1,
+        outB => bfu_out_B1
     );
     ram1: ram
     generic map (
@@ -121,8 +133,8 @@ begin
         clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
-        read_A => read_A1, 
-        read_B => read_B1
+        read_A => read_buff(0), 
+        read_B => read_buff(1)
     );
     bfu2: butterfly
     generic map(
@@ -131,11 +143,11 @@ begin
     )
     port map(
         clk => clk,
-        inA => read_A2,
-        outA => bfu_A2,
+        inA => bfu_in_A2,
+        outA => bfu_out_A2,
         twiddle => twiddle,
-        inB => read_B2,
-        outB => bfu_B2
+        inB => bfu_in_B2,
+        outB => bfu_out_B2
     );
     ram2: ram
     generic map (
@@ -152,8 +164,8 @@ begin
         clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
-        read_A => read_A2, 
-        read_B => read_B2
+        read_A => read_buff(2), 
+        read_B => read_buff(3)
     );
     twiddle_rom: rom
     generic map (
@@ -166,12 +178,12 @@ begin
     );
 
 
-    write_A1 <= bfu_A1 when get_input = '0' else inA;
-    write_B1 <= bfu_B1;
-    write_A2 <= bfu_A2 when get_input = '0' else inB;
-    write_B2 <= bfu_B2;
-    outA <= bfu_A1;
-    outB <= bfu_B2;
+    write_A1 <= bfu_out_A1 when get_input = '0' else inA;
+    write_B1 <= bfu_out_B1;
+    write_A2 <= bfu_out_A2 when get_input = '0' else inB;
+    write_B2 <= bfu_out_B2;
+    outA <= bfu_out_A1;
+    outB <= bfu_out_A2;
 
     --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes
     output_valid_buff1 <= generate_output;
