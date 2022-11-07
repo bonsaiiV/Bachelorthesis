@@ -25,8 +25,7 @@ architecture fft_b of fft is
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
         generate_output, write_A_enable, write_B_enable: out std_logic;
-        get_input: out std_logic;
-        merge_step: out std_logic_vector(n_parallel-1 downto 0));
+        get_input: out std_logic);
     end component;
     signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
     signal write_A_enable, write_B_enable: std_logic;
@@ -36,7 +35,6 @@ architecture fft_b of fft is
     --control signals
     signal generate_output: std_logic;
     signal output_valid_buff1, output_valid_buff2: std_logic := '0';
-    signal merge_step: std_logic_vector(n_parallel-1 downto 0);
 
 
     --mux are arrays used in the merge process to match the ram data to the correct bfu
@@ -102,8 +100,7 @@ begin
         generate_output => generate_output,
         write_A_enable => write_A_enable,
         write_B_enable => write_B_enable,
-        get_input => get_input,
-        merge_step => merge_step
+        get_input => get_input
     );
     bfu1: butterfly
     generic map(
