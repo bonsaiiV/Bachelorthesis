@@ -2,6 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+package my_types_pkg is
+    type addr_MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(n_parallel-1 downto 0);
+end package;
+
+
 entity management_unit is
     generic(
             N: integer;
@@ -11,7 +16,8 @@ entity management_unit is
          twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
          generate_output, write_A_enable, write_B_enable: out std_logic;
-         get_input: out std_logic);
+         get_input: out std_logic;
+         ram_re_addr: out addr_MUX);
 end management_unit;
 
 architecture management_unit_b of management_unit is
@@ -112,7 +118,7 @@ begin
 
             addr_A_write_buff2 <= addr_A_write_buff1;
             addr_B_write_buff2 <= addr_B_write_buff1;
-
+            --when merging, ram elements are taken in order since permutation happens on ram level not address level
             addr_A_write_buff1 <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '0';
             addr_B_write_buff1 <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '1';
         end if;

@@ -2,6 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+package my_types_pkg is
+    type addr_MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(n_parallel-1 downto 0);
+    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+
+end package;
+
 entity fft is
     generic(N : integer := 3;
             width : integer := 8; 
@@ -25,7 +31,8 @@ architecture fft_b of fft is
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
         generate_output, write_A_enable, write_B_enable: out std_logic;
-        get_input: out std_logic);
+        get_input: out std_logic;
+        ram_re_addr: out addr_MUX);
     end component;
     signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
     signal write_A_enable, write_B_enable: std_logic;
@@ -38,9 +45,11 @@ architecture fft_b of fft is
 
 
     --mux are arrays used in the merge process to match the ram data to the correct bfu
-    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+    --type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
     signal read_buff: MUX;
     signal write_buff: MUX;
+    signal bfu_in: MUX;
+    signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX;
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -79,8 +88,8 @@ architecture fft_b of fft is
     --signals, that need to me multiplied for new paths
     signal bfu_out_A1, bfu_out_B1 : std_logic_vector(2*width-1 downto 0);
     signal bfu_out_A2, bfu_out_B2 : std_logic_vector(2*width-1 downto 0);
-    signal bfu_in_A1, bfu_in_B1, write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
-    signal bfu_in_A2, bfu_in_B2, write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
+    signal write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
+    signal write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
     
 begin
     mu: management_unit
@@ -100,7 +109,8 @@ begin
         generate_output => generate_output,
         write_A_enable => write_A_enable,
         write_B_enable => write_B_enable,
-        get_input => get_input
+        get_input => get_input,
+        ram_re_addr => ram_re_addr
     );
     bfu1: butterfly
     generic map(
@@ -109,10 +119,10 @@ begin
     )
     port map(
         clk => clk,
-        inA => bfu_in_A1,
+        inA => bfu_in(0),
         outA => bfu_out_A1,
         twiddle => twiddle,
-        inB => bfu_in_B1,
+        inB => bfu_in(1),
         outB => bfu_out_B1
     );
     ram1: ram
@@ -140,10 +150,10 @@ begin
     )
     port map(
         clk => clk,
-        inA => bfu_in_A2,
+        inA => bfu_in(3),
         outA => bfu_out_A2,
         twiddle => twiddle,
-        inB => bfu_in_B2,
+        inB => bfu_in(4),
         outB => bfu_out_B2
     );
     ram2: ram
@@ -189,10 +199,14 @@ begin
         if (rising_edge(clk)) then
             output_valid <= output_valid_buff2;
             output_valid_buff2 <= output_valid_buff1;
+
+
         end if;
     end process;
 
-    
+    gen_re_addr: for i in 0 to n_parallel-1 generate
+            bfu_in(i) <= read_buff(to_integer(unsigned(ram_re_addr(i))));
+    end generate
 
     --reverse addresses to simulate permutating except for input to make it natural ordered
     --TODO maybe merge write buffering and input reversing?
