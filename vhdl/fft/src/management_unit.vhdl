@@ -123,6 +123,7 @@ begin
 
     addr_A_read <= ram_A_addresses;
     addr_B_read <= ram_B_addresses;
+    --when merging, ram elements are taken in order since permutation happens on ram level not address level
     ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '0';
     ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '1';
     process(clk)
@@ -134,7 +135,7 @@ begin
 
             addr_A_write_buff2 <= addr_A_write_buff1;
             addr_B_write_buff2 <= addr_B_write_buff1;
-            --when merging, ram elements are taken in order since permutation happens on ram level not address level
+            
             addr_A_write_buff1 <= ram_A_addresses;
             addr_B_write_buff1 <= ram_B_addresses;
         end if;
