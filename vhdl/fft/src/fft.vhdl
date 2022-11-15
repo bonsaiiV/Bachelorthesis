@@ -8,7 +8,7 @@ entity fft is
     generic(N : integer := 3;
             width : integer := 8; 
             width_twiddle : integer := 6;
-            n_parallel : integer := 1);
+            n_parallel : integer := 1); --number of splits in a path: the amount of paths is 2**n_parallel
     port (
         clk, fft_start : in std_logic;
         output_valid : out std_logic := '0';
@@ -184,6 +184,7 @@ begin
     write_buff(to_integer(unsigned(write_re_addr_buff2(0)))) <= bfu_out(0) when get_input = '0' else inA;
     write_buff(to_integer(unsigned(write_re_addr_buff2(1)))) <= bfu_out(1);
     write_buff(to_integer(unsigned(write_re_addr_buff2(2)))) <= bfu_out(2) when get_input = '0' else inB;
+    --TODO do not use the readressing in value written to!!!!
     outA <= bfu_out(0);
     outB <= bfu_out(2);
 
@@ -200,16 +201,15 @@ begin
         end if;
     end process;
 
-    gen_write_re_addr: for i in 3 to n_parallel-1 generate
+    gen_write_re_addr: for i in 3 to 2*(n_parallel+1)-1 generate
         write_buff(to_integer(unsigned(write_re_addr_buff2(i)))) <= bfu_out(i);
     end generate gen_write_re_addr;
 
-    gen_ram_re_addr: for i in 0 to n_parallel-1 generate
+    gen_read_re_addr: for i in 0 to 2*(n_parallel+1)-1 generate
             bfu_in(i) <= read_buff(to_integer(unsigned(ram_re_addr(i))));
-    end generate gen_ram_re_addr;
+    end generate gen_read_re_addr;
 
     --reverse addresses to simulate permutating except for input to make it natural ordered
-    --TODO maybe merge write buffering and input reversing?
     gen_rev_addr: for i in 0 to N-n_parallel-1 generate
         reversed_A_addr(i) <= addr_A_write_buff(N-n_parallel-i-1);
         reversed_B_addr(i) <= addr_B_write_buff(N-n_parallel-i-1);

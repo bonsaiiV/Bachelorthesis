@@ -38,6 +38,45 @@ architecture management_unit_b of management_unit is
     signal tmp_mask, constant_mask: std_logic_vector(N-n_parallel-1 downto 0) := ('1', others => '0');
     signal merge_step: std_logic;
 begin
+    --managing state of fft
+    process(fft_start, fft_finished) 
+    begin
+        if(fft_start = '1') then
+            fft_running <= '1';
+        elsif(fft_finished = '1') then
+            fft_running <= '0';
+        end if;
+    end process;
+
+    write_enable <= fft_running;
+
+    generate_output <= '1' when to_integer(unsigned(layer)) = n-1 else '0';
+
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            layer_incr_enable <= not is_getting_input;
+        end if;
+    end process;
+
+    process(fft_finished, index_resets)
+    begin
+        if(fft_finished = '1') then
+            is_getting_input <= '1';
+        elsif(io_done = '1') then
+            is_getting_input <= '0';
+        end if;
+    end process;
+
+    get_input <= is_getting_input;
+
+    merge_step <= '1' when to_integer(unsigned(layer)) >= n-n_parallel else '0';
+
+
+
+    --address generation
+
+
     --this counter is for IO:
     --since the index doesn't iterate over N/2 anymore (instead N/(2*2^n_parallel))
     --this is because there are 2^n_parallel butterfly units, each acting on 2 elemnts
@@ -79,29 +118,8 @@ begin
             resets => fft_finished
         );
     
-    process(fft_start, fft_finished) 
-    begin
-        if(fft_start = '1') then
-            fft_running <= '1';
-        elsif(fft_finished = '1') then
-            fft_running <= '0';
-        end if;
-    end process;
-    generate_output <= '1' when to_integer(unsigned(layer)) = n-1 else '0';
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            layer_incr_enable <= not is_getting_input;
-        end if;
-    end process;
-    process(fft_finished, index_resets)
-    begin
-        if(fft_finished = '1') then
-            is_getting_input <= '1';
-        elsif(io_done = '1') then
-            is_getting_input <= '0';
-        end if;
-    end process;
+
+
 
     addr_A_read <= ram_A_addresses;
     addr_B_read <= ram_B_addresses;
@@ -124,12 +142,13 @@ begin
     addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_A_write_buff2;
     addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_B_write_buff2;
 
-    merge_step <= '1' when to_integer(unsigned(layer)) >= n-n_parallel else '0';
 
-    get_input <= is_getting_input;
 
-    write_enable <= fft_running;
+    gen_ram_re_addr: for i in 0 to 2*(n_parallel+1)-1 generate
+            ram_re_addr(i) <= std_logic_vector(to_unsigned(i) ROL to_integer(unsigned(merge_step)));
+    end generate gen_ram_re_addr;
 
+    --twiddle
     twiddle_addr <= '0' & (index and twiddle_mask(N-n_parallel-2 downto 0));
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
