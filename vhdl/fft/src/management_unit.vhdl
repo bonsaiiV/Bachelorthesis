@@ -34,9 +34,9 @@ architecture management_unit_b of management_unit is
     signal index: std_logic_vector(N-n_parallel-2 downto 0);
     signal twiddle_mask: std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
-    signal addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-n_parallel-1 downto 0);
+    signal ram_A_addresses, ram_B_addresses, addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-n_parallel-1 downto 0);
     signal tmp_mask, constant_mask: std_logic_vector(N-n_parallel-1 downto 0) := ('1', others => '0');
-    signal merge_step: std_logic_vector(n_parallel-1 downto 0);
+    signal merge_step: std_logic;
 begin
     --this counter is for IO:
     --since the index doesn't iterate over N/2 anymore (instead N/(2*2^n_parallel))
@@ -103,9 +103,10 @@ begin
         end if;
     end process;
 
-    addr_A_read <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer)));
-    addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer)));
-
+    addr_A_read <= ram_A_addresses;
+    addr_B_read <= ram_B_addresses;
+    ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '0';
+    ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '1';
     process(clk)
     begin
         if(rising_edge(clk)) then
@@ -116,8 +117,8 @@ begin
             addr_A_write_buff2 <= addr_A_write_buff1;
             addr_B_write_buff2 <= addr_B_write_buff1;
             --when merging, ram elements are taken in order since permutation happens on ram level not address level
-            addr_A_write_buff1 <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '0';
-            addr_B_write_buff1 <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = '0' else index & '1';
+            addr_A_write_buff1 <= ram_A_addresses;
+            addr_B_write_buff1 <= ram_B_addresses;
         end if;
     end process;
     addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_A_write_buff2;

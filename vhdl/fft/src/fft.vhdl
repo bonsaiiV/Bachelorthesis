@@ -41,7 +41,12 @@ architecture fft_b of fft is
 
 
     --mux are arrays used in the merge process to match the ram data to the correct bfu
+    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+    signal read_buff: MUX := (others => (others => '0'));
+    signal write_buff: MUX := (others => (others => '0'));
     signal ram_write_enable : std_logic_vector(2**(n_parallel+1)-1 downto 0);
+    signal bfu_in, bfu_out: MUX := (others => (others => '0'));
+    signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX := (others => (others => '0'));
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -77,11 +82,6 @@ architecture fft_b of fft is
     );
     end component;
 
-    --signals, that need to me multiplied for new paths
-    signal bfu_out_A1, bfu_out_B1 : std_logic_vector(2*width-1 downto 0);
-    signal bfu_out_A2, bfu_out_B2 : std_logic_vector(2*width-1 downto 0);
-    signal write_A1, write_B1: std_logic_vector(2*width-1 downto 0);
-    signal write_A2, write_B2: std_logic_vector(2*width-1 downto 0);
     
 begin
     mu: management_unit
@@ -111,10 +111,10 @@ begin
     port map(
         clk => clk,
         inA => bfu_in(0),
-        outA => bfu_out_A1,
+        outA => bfu_out(0),
         twiddle => twiddle,
         inB => bfu_in(1),
-        outB => bfu_out_B1
+        outB => bfu_out(1)
     );
     ram1: ram
     generic map (
@@ -124,8 +124,8 @@ begin
     port map(
         write_addr_A => write_A_addr,
         write_addr_B => write_B_addr,
-        write_A => write_A1, 
-        write_B => write_B1,
+        write_A => write_buff(0), 
+        write_B => write_buff(1),
         write_enable_A => ram_write_enable(0), 
         write_enable_B => ram_write_enable(1),
         clk => clk,
@@ -141,11 +141,11 @@ begin
     )
     port map(
         clk => clk,
-        inA => bfu_in(3),
-        outA => bfu_out_A2,
+        inA => bfu_in(2),
+        outA => bfu_out(2),
         twiddle => twiddle,
-        inB => bfu_in(4),
-        outB => bfu_out_B2
+        inB => bfu_in(3),
+        outB => bfu_out(3)
     );
     ram2: ram
     generic map (
@@ -155,8 +155,8 @@ begin
     port map(
         write_addr_A => write_A_addr,
         write_addr_B => write_B_addr,
-        write_A => write_A2, 
-        write_B => write_B2,
+        write_A => write_buff(2), 
+        write_B => write_buff(3),
         write_enable_A => ram_write_enable(2), 
         write_enable_B => ram_write_enable(3),
         clk => clk,
@@ -181,6 +181,12 @@ begin
     ram_write_enable(2) <= write_enable;
     ram_write_enable(3) <= write_enable when get_input = '0' else '0';
 
+    write_buff(to_integer(unsigned(write_re_addr_buff2(0)))) <= bfu_out(0) when get_input = '0' else inA;
+    write_buff(to_integer(unsigned(write_re_addr_buff2(1)))) <= bfu_out(1);
+    write_buff(to_integer(unsigned(write_re_addr_buff2(2)))) <= bfu_out(2) when get_input = '0' else inB;
+    outA <= bfu_out(0);
+    outB <= bfu_out(2);
+
     --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes
     output_valid_buff1 <= generate_output;
     process(clk)
@@ -189,13 +195,18 @@ begin
             output_valid <= output_valid_buff2;
             output_valid_buff2 <= output_valid_buff1;
 
-
+            write_re_addr_buff1 <= ram_re_addr;
+            write_re_addr_buff2 <= write_re_addr_buff1;
         end if;
     end process;
 
-    gen_re_addr: for i in 0 to n_parallel-1 generate
+    gen_write_re_addr: for i in 3 to n_parallel-1 generate
+        write_buff(to_integer(unsigned(write_re_addr_buff2(i)))) <= bfu_out(i);
+    end generate gen_write_re_addr;
+
+    gen_ram_re_addr: for i in 0 to n_parallel-1 generate
             bfu_in(i) <= read_buff(to_integer(unsigned(ram_re_addr(i))));
-    end generate
+    end generate gen_ram_re_addr;
 
     --reverse addresses to simulate permutating except for input to make it natural ordered
     --TODO maybe merge write buffering and input reversing?
@@ -204,7 +215,8 @@ begin
         reversed_B_addr(i) <= addr_B_write_buff(N-n_parallel-i-1);
         read_A_addr(i) <= addr_A_read_buff(N-n_parallel-i-1);
         read_B_addr(i) <= addr_B_read_buff(N-n_parallel-i-1);
-    end generate;
+    end generate gen_rev_addr;
+
     write_A_addr <= reversed_A_addr when get_input = '0' else addr_A_write_buff;
     write_B_addr <= reversed_B_addr;
     
