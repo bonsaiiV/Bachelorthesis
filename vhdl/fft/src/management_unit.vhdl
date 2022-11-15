@@ -1,11 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-
-package my_types_pkg is
-    type addr_MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(n_parallel-1 downto 0);
-end package;
-
+library fft_types;
+use fft_types.types.all;
 
 entity management_unit is
     generic(

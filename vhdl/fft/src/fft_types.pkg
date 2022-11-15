@@ -1,0 +1,7 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+package types is
+    --type addr_MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(n_parallel+1-1 downto 0);
+    type addr_MUX is array(0 to 3) of std_logic_vector(1 downto 0);
+end package;
