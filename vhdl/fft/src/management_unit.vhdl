@@ -12,7 +12,7 @@ entity management_unit is
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
-         generate_output, write_A_enable, write_B_enable: out std_logic;
+         generate_output, write_enable: out std_logic;
          get_input: out std_logic;
          ram_re_addr: out addr_MUX);
 end management_unit;
@@ -126,8 +126,8 @@ begin
     merge_step <= '1' when to_integer(unsigned(layer)) >= n-n_parallel else '0';
 
     get_input <= is_getting_input;
-    write_A_enable <= fft_running;
-    write_b_enable <= fft_running;
+
+    write_enable <= fft_running;
 
     twiddle_addr <= '0' & (index and twiddle_mask(N-n_parallel-2 downto 0));
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));

@@ -26,12 +26,12 @@ architecture fft_b of fft is
     port(fft_start, clk: in std_logic;
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
-        generate_output, write_A_enable, write_B_enable: out std_logic;
+        generate_output, write_enable: out std_logic;
         get_input: out std_logic;
         ram_re_addr: out addr_MUX);
     end component;
     signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
-    signal write_A_enable, write_B_enable: std_logic;
+    signal write_enable: std_logic;
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
     signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
 
@@ -41,11 +41,7 @@ architecture fft_b of fft is
 
 
     --mux are arrays used in the merge process to match the ram data to the correct bfu
-    --type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
-    signal read_buff: MUX;
-    signal write_buff: MUX;
-    signal bfu_in: MUX;
-    signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX;
+    signal ram_write_enable : std_logic_vector(2**(n_parallel+1)-1 downto 0);
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -103,8 +99,7 @@ begin
         addr_A_write => addr_A_write_buff,
         addr_B_write => addr_B_write_buff,
         generate_output => generate_output,
-        write_A_enable => write_A_enable,
-        write_B_enable => write_B_enable,
+        write_enable => write_enable,
         get_input => get_input,
         ram_re_addr => ram_re_addr
     );
@@ -131,8 +126,8 @@ begin
         write_addr_B => write_B_addr,
         write_A => write_A1, 
         write_B => write_B1,
-        write_enable_A => write_A_enable, 
-        write_enable_B => write_B_enable,
+        write_enable_A => ram_write_enable(0), 
+        write_enable_B => ram_write_enable(1),
         clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
@@ -162,8 +157,8 @@ begin
         write_addr_B => write_B_addr,
         write_A => write_A2, 
         write_B => write_B2,
-        write_enable_A => write_A_enable, 
-        write_enable_B => write_B_enable,
+        write_enable_A => ram_write_enable(2), 
+        write_enable_B => ram_write_enable(3),
         clk => clk,
         read_addr_A => read_A_addr, 
         read_addr_B => read_B_addr,
@@ -181,12 +176,10 @@ begin
     );
 
 
-    write_A1 <= bfu_out_A1 when get_input = '0' else inA;
-    write_B1 <= bfu_out_B1;
-    write_A2 <= bfu_out_A2 when get_input = '0' else inB;
-    write_B2 <= bfu_out_B2;
-    outA <= bfu_out_A1;
-    outB <= bfu_out_A2;
+    ram_write_enable(0) <= write_enable;
+    ram_write_enable(1) <= write_enable when get_input = '0' else '0';
+    ram_write_enable(2) <= write_enable;
+    ram_write_enable(3) <= write_enable when get_input = '0' else '0';
 
     --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes
     output_valid_buff1 <= generate_output;
