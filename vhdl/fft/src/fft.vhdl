@@ -18,6 +18,39 @@ entity fft is
 end fft;
 
 architecture fft_b of fft is
+
+    --control signals
+    signal generate_output: std_logic;
+    signal output_valid_buff1, output_valid_buff2: std_logic := '0';
+    signal get_input: std_logic;
+
+    signal write_enable : std_logic_vector(2**(n_parallel+1)-1 downto 0);
+
+        
+    --mux are arrays used in the merge process to match the ram data to the correct bfu
+    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+
+    --data signals
+
+    signal read_buff: MUX := (others => (others => '0'));
+    signal write_buff: MUX := (others => (others => '0'));
+    signal bfu_in, bfu_out: MUX := (others => (others => '0'));
+
+    --address signals
+
+    signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX := (others => (others => '0'));
+
+    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
+    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
+    signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
+
+    --twiddle signals
+
+    signal twiddle_addr: std_logic_vector(N-2 downto 0);
+    signal twiddle: std_logic_vector(2*width_twiddle-1 downto 0);
+
+    --components 
+
     component management_unit
     generic(
         N: integer;
@@ -26,27 +59,11 @@ architecture fft_b of fft is
     port(fft_start, clk: in std_logic;
         twiddle_addr: out std_logic_vector(N-2 downto 0);
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
-        generate_output, write_enable: out std_logic;
+        generate_output: out std_logic;
         get_input: out std_logic;
-        ram_re_addr: out addr_MUX);
+        ram_re_addr: out addr_MUX;
+        write_enable: out std_logic_vector(2**(n_parallel+1)-1 downto 0));
     end component;
-    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
-    signal write_enable: std_logic;
-    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
-    signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
-
-    --control signals
-    signal generate_output: std_logic;
-    signal output_valid_buff1, output_valid_buff2: std_logic := '0';
-
-
-    --mux are arrays used in the merge process to match the ram data to the correct bfu
-    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
-    signal read_buff: MUX := (others => (others => '0'));
-    signal write_buff: MUX := (others => (others => '0'));
-    signal ram_write_enable : std_logic_vector(2**(n_parallel+1)-1 downto 0);
-    signal bfu_in, bfu_out: MUX := (others => (others => '0'));
-    signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX := (others => (others => '0'));
 
     component butterfly
     generic(width_A, width_twiddle : integer);
@@ -55,12 +72,6 @@ architecture fft_b of fft is
             twiddle : in  std_logic_vector(width_twiddle*2-1 downto 0);
             outA, outB : out std_logic_vector(width_A*2-1 downto 0));
     end component;
-
-
-    signal twiddle_addr: std_logic_vector(N-2 downto 0);
-    signal twiddle: std_logic_vector(2*width_twiddle-1 downto 0);
-
-    signal get_input: std_logic;
 
     component ram
         generic(width:integer;
@@ -71,6 +82,7 @@ architecture fft_b of fft is
              read_addr_A, read_addr_B: in std_logic_vector(length-1 downto 0) := (others => '0');
              read_A, read_B: out std_logic_vector(width-1 downto 0));
     end component;
+
     component rom
     generic(
         width :integer;
@@ -175,7 +187,7 @@ begin
         value => twiddle
     );
 
-
+    --TODO this is wrong, move to mu?
     ram_write_enable(0) <= write_enable;
     ram_write_enable(1) <= write_enable when get_input = '0' else '0';
     ram_write_enable(2) <= write_enable;

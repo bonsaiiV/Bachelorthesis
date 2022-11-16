@@ -12,9 +12,10 @@ entity management_unit is
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
          addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
-         generate_output, write_enable: out std_logic;
+         generate_output: out std_logic;
          get_input: out std_logic;
-         ram_re_addr: out addr_MUX);
+         ram_re_addr: out addr_MUX;
+         write_enable: out std_logic_vector(2**(n_parallel+1)-1 downto 0));
 end management_unit;
 
 architecture management_unit_b of management_unit is
