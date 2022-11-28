@@ -8,17 +8,44 @@ entity management_unit is
     generic(
             N: integer;
             layer_l: integer;
-            n_parallel: integer:=0); --amount of splits in paths of fft
+            log2_paths: integer:=1;
+            log2_paths: integer:=2); --amount of splits in paths of fft
     port(fft_start, clk: in std_logic;
          twiddle_addr: out std_logic_vector(N-2 downto 0);
-         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
+         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
          generate_output: out std_logic;
          get_input: out std_logic;
          ram_re_addr: out addr_MUX;
-         write_enable: out std_logic_vector(2**(n_parallel+1)-1 downto 0));
+         write_enable: out std_logic_vector(paths-1 downto 0));
 end management_unit;
 
 architecture management_unit_b of management_unit is
+    
+    --control signals
+    signal io_done, index_resets, fft_running: std_logic := '0';
+    signal start_merging: std_logic := 0;
+    signal fft_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
+    signal is_getting_input, is_getting_input_buff1, is_getting_input_buff2 : std_logic:= '1';
+
+
+    signal layer_incr, layer_incr_enable : std_logic:='0';
+
+    --address generation signals
+
+    signal index: std_logic_vector(N-log2_paths-2 downto 0);
+    signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
+    signal ram_A_addresses, ram_B_addresses, addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-log2_paths-1 downto 0);
+
+    signal merge_step: std_logic_vector(log2_paths downto 0);
+
+    signal io_adresses: std_logic_vector(N-2 downto 0)
+    signal chunk: std_logic_vector(log2_paths downto 0);
+
+    --twiddle address signals
+    signal twiddle_mask: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
+    signal tmp_mask, constant_mask: std_logic_vector(N-log2_paths-1 downto 0) := ('1', others => '0');
+
+
     component counter
         generic (count_width : integer; max : integer);
         port(enable, clk : in std_logic;
@@ -27,17 +54,6 @@ architecture management_unit_b of management_unit is
              resets : out std_logic);
     end component;
 
-    signal chunk: std_logic_vector(n_parallel downto 0);
-    signal is_getting_input, is_getting_input_buff1, is_getting_input_buff2 : std_logic:= '1';
-    signal layer_incr, layer_incr_enable : std_logic:='0';
-    signal fft_finished: std_logic:='1'; -- internal impulse to end calculation 
-    signal io_done, index_resets, fft_running: std_logic := '0';
-    signal index: std_logic_vector(N-n_parallel-2 downto 0);
-    signal twiddle_mask: std_logic_vector(N-n_parallel-1 downto 0) := (others => '0');
-    signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
-    signal ram_A_addresses, ram_B_addresses, addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-n_parallel-1 downto 0);
-    signal tmp_mask, constant_mask: std_logic_vector(N-n_parallel-1 downto 0) := ('1', others => '0');
-    signal merge_step: std_logic;
 begin
     --managing state of fft
     process(fft_start, fft_finished) 
@@ -71,7 +87,17 @@ begin
 
     get_input <= is_getting_input;
 
-    merge_step <= '1' when to_integer(unsigned(layer)) >= n-n_parallel else '0';
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            -- this buffer is important since bfu is 2 cycles
+            is_getting_input_buff1 <= is_getting_input;
+            is_getting_input_buff2 <= is_getting_input_buff1;
+
+        end if;
+    end process;
+
+    merge_step <= '1' when to_integer(unsigned(layer)) >= n-log2_paths else '0';
 
 
 
@@ -79,13 +105,13 @@ begin
 
 
     --this counter is for IO:
-    --since the index doesn't iterate over N/2 anymore (instead N/(2*2^n_parallel))
-    --this is because there are 2^n_parallel butterfly units, each acting on 2 elemnts
-    --io hoever stays on 2 wires, so it needs 2^n_parallel iterations
+    --since the index doesn't iterate over N/2 anymore (instead N/(2*2^log2_paths))
+    --this is because there are 2^log2_paths butterfly units, each acting on 2 elemnts
+    --io hoever stays on 2 wires, so it needs 2^log2_paths iterations
     IO_Chunk_cnt: counter
         generic map (
-            count_width => n_parallel+1,
-            max => 2**(n_parallel)-1
+            count_width => log2_paths+1,
+            max => paths-1
         )
         port map (
             enable => is_getting_input,
@@ -94,18 +120,33 @@ begin
             value => chunk,
             resets => io_done
         );
+    
+    merge_cnt: counter
+        generic map (
+            count_width => log2_paths,
+            max => log2_paths
+        )
+        port map (
+            enable => ,
+            clr => fft_finished,
+            clk => index_resets,
+            value => merge_step,
+            resets => fft_finished
+        );
+
     Index_cnt: counter
         generic map (
-            count_width => N-n_parallel-1,
-            max => 2**(N-n_parallel-1)-1
+            count_width => N-log2_paths-1,
+            max => 2**(N-log2_paths-1)-1
         )
         port map(
             enable => fft_running,
-            clr => fft_finished,
+            clr => start_merging,
             clk => clk,
             value => index,
             resets => index_resets
         );
+
     Layer_cnt: counter
         generic map (
             count_width => layer_l,
@@ -130,10 +171,6 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            -- this buffer is important since bfu is 2 cycles
-            is_getting_input_buff1 <= is_getting_input;
-            is_getting_input_buff2 <= is_getting_input_buff1;
-
             addr_A_write_buff2 <= addr_A_write_buff1;
             addr_B_write_buff2 <= addr_B_write_buff1;
             
@@ -141,17 +178,16 @@ begin
             addr_B_write_buff1 <= ram_B_addresses;
         end if;
     end process;
+
     addr_A_write <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_A_write_buff2;
     addr_B_write <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_getting_input_buff2 = '1' else addr_B_write_buff2;
 
-
-
-    gen_ram_re_addr: for i in 0 to 2*(n_parallel+1)-1 generate
+    gen_ram_re_addr: for i in 0 to 2*(log2_paths+1)-1 generate
             ram_re_addr(i) <= std_logic_vector(to_unsigned(i) ROL to_integer(unsigned(merge_step)));
     end generate gen_ram_re_addr;
 
     --twiddle
-    twiddle_addr <= '0' & (index and twiddle_mask(N-n_parallel-2 downto 0));
+    twiddle_addr <= '0' & (index and twiddle_mask(N-log2_paths-2 downto 0));
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;

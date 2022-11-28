@@ -8,7 +8,8 @@ entity fft is
     generic(N : integer := 3;
             width : integer := 8; 
             width_twiddle : integer := 6;
-            n_parallel : integer := 1); --number of splits in a path: the amount of paths is 2**n_parallel
+            log2_paths : integer := 1;
+            paths : integer := 2);
     port (
         clk, fft_start : in std_logic;
         output_valid : out std_logic := '0';
@@ -24,11 +25,11 @@ architecture fft_b of fft is
     signal output_valid_buff1, output_valid_buff2: std_logic := '0';
     signal get_input: std_logic;
 
-    signal write_enable : std_logic_vector(2**(n_parallel+1)-1 downto 0);
+    signal write_enable : std_logic_vector(2**(log2_paths+1)-1 downto 0);
 
         
     --mux are arrays used in the merge process to match the ram data to the correct bfu
-    type MUX is array(0 to 2**(n_parallel+1)-1) of std_logic_vector(2*width-1 downto 0);
+    type MUX is array(0 to 2**(log2_paths+1)-1) of std_logic_vector(2*width-1 downto 0);
 
     --data signals
 
@@ -40,9 +41,9 @@ architecture fft_b of fft is
 
     signal ram_re_addr, write_re_addr_buff1, write_re_addr_buff2: addr_MUX := (others => (others => '0'));
 
-    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-n_parallel-1 downto 0);
-    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
-    signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-n_parallel-1 downto 0);
+    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-log2_paths-1 downto 0);
+    signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-log2_paths-1 downto 0);
+    signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-log2_paths-1 downto 0);
 
     --twiddle signals
 
@@ -58,11 +59,11 @@ architecture fft_b of fft is
         n_parallel: integer);
     port(fft_start, clk: in std_logic;
         twiddle_addr: out std_logic_vector(N-2 downto 0);
-        addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-n_parallel-1 downto 0);
+        addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-log2_paths-1 downto 0);
         generate_output: out std_logic;
         get_input: out std_logic;
         ram_re_addr: out addr_MUX;
-        write_enable: out std_logic_vector(2**(n_parallel+1)-1 downto 0));
+        write_enable: out std_logic_vector(2**(log2_paths+1)-1 downto 0));
     end component;
 
     component butterfly
@@ -100,7 +101,7 @@ begin
     generic map (
         N => N,
         layer_l => 2,
-        n_parallel => n_parallel
+        n_parallel => log2_paths
     )
     port map (
         fft_start => fft_start,
@@ -131,7 +132,7 @@ begin
     ram1: ram
     generic map (
         width => 2*width,
-        length => N-n_parallel
+        length => N-log2_paths
     )
     port map(
         write_addr_A => write_A_addr,
@@ -162,7 +163,7 @@ begin
     ram2: ram
     generic map (
         width => 2*width,
-        length => N-n_parallel
+        length => N-log2_paths
     )
     port map(
         write_addr_A => write_A_addr,
@@ -213,20 +214,20 @@ begin
         end if;
     end process;
 
-    gen_write_re_addr: for i in 3 to 2*(n_parallel+1)-1 generate
+    gen_write_re_addr: for i in 3 to 2*paths-1 generate
         write_buff(to_integer(unsigned(write_re_addr_buff2(i)))) <= bfu_out(i);
     end generate gen_write_re_addr;
 
-    gen_read_re_addr: for i in 0 to 2*(n_parallel+1)-1 generate
+    gen_read_re_addr: for i in 0 to 2*paths-1 generate
             bfu_in(i) <= read_buff(to_integer(unsigned(ram_re_addr(i))));
     end generate gen_read_re_addr;
 
     --reverse addresses to simulate permutating except for input to make it natural ordered
-    gen_rev_addr: for i in 0 to N-n_parallel-1 generate
-        reversed_A_addr(i) <= addr_A_write_buff(N-n_parallel-i-1);
-        reversed_B_addr(i) <= addr_B_write_buff(N-n_parallel-i-1);
-        read_A_addr(i) <= addr_A_read_buff(N-n_parallel-i-1);
-        read_B_addr(i) <= addr_B_read_buff(N-n_parallel-i-1);
+    gen_rev_addr: for i in 0 to N-n_log2_paths-1 generate
+        reversed_A_addr(i) <= addr_A_write_buff(N-log2_paths-i-1);
+        reversed_B_addr(i) <= addr_B_write_buff(N-log2_paths-i-1);
+        read_A_addr(i) <= addr_A_read_buff(N-log2_paths-i-1);
+        read_B_addr(i) <= addr_B_read_buff(N-log2_paths-i-1);
     end generate gen_rev_addr;
 
     write_A_addr <= reversed_A_addr when get_input = '0' else addr_A_write_buff;
