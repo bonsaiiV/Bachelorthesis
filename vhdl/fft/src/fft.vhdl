@@ -39,9 +39,11 @@ architecture fft_b of fft is
 
     --address signals
 
+    signal outA_source, outB_source : std_logic_vector(log2_paths downto 0);
+
     signal read_ram_switch, write_ram_switch: addr_MUX := (others => (others => '0'));
 
-    signal addr_A_read_buff, addr_B_read_buff, addr_A_write_buff, addr_B_write_buff: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
+    signal addr_A_read, addr_B_read, addr_A_write, addr_B_write: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
     signal read_A_addr, read_B_addr, write_A_addr, write_B_addr: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
     signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
@@ -64,7 +66,8 @@ architecture fft_b of fft is
         generate_output: out std_logic;
         get_input: out std_logic;
         read_ram_switch, write_ram_switch: out addr_MUX;
-        write_enable: out std_logic_vector(2*paths-1 downto 0));
+        write_enable: out std_logic_vector(2*paths-1 downto 0);
+        outA_source, outB_source: out std_logic_vector(log2_paths downto 0));
     end component;
 
     component butterfly
@@ -109,10 +112,10 @@ begin
         fft_start => fft_start,
         clk => clk,
         twiddle_addr => twiddle_addr,
-        addr_A_read => addr_A_read_buff,
-        addr_B_read => addr_B_read_buff,
-        addr_A_write => addr_A_write_buff,
-        addr_B_write => addr_B_write_buff,
+        addr_A_read => addr_A_read,
+        addr_B_read => addr_B_read,
+        addr_A_write => addr_A_write,
+        addr_B_write => addr_B_write,
         generate_output => generate_output,
         write_enable => write_enable,
         get_input => get_input,
@@ -139,15 +142,15 @@ begin
             length => N-log2_paths
         )
         port map(
-            write_addr_A => write_A_addr,
-            write_addr_B => write_B_addr,
+            write_addr_A => addr_A_write,
+            write_addr_B => addr_B_write,
             write_A => write_buff(2*i), 
             write_B => write_buff(2*i+1),
             write_enable_A => write_enable(2*i), 
             write_enable_B => write_enable(2*i+1),
             clk => clk,
-            read_addr_A => read_A_addr, 
-            read_addr_B => read_B_addr,
+            read_addr_A => addr_A_read, 
+            read_addr_B => addr_B_read,
             read_A => read_buff(2*i), 
             read_B => read_buff(2*i+1)
         );
@@ -163,8 +166,8 @@ begin
     );
 
     --IO
-    outA <= bfu_out(0);
-    outB <= bfu_out(2);
+    outA <= read_buff(to_integer(unsigned(outA_source)));
+    outB <= read_buff(to_integer(unsigned(outB_source)));
     process(clk)
     begin
         if (rising_edge(clk)) then
@@ -177,20 +180,20 @@ begin
     end process;
 
     gen_write_switching: for i in 0 to paths-1 generate
-        write_buff(2*i) <= bfu_out(to_integer(unsigned(write_ram_switch(2*i)))) when get_input = '0' else inA_buff2;
-        write_buff(2*i+1) <= bfu_out(to_integer(unsigned(write_ram_switch(2*i+1)))) when get_input = '0' else inB_buff2;
+        write_buff(i) <= bfu_out(to_integer(unsigned(write_ram_switch(i)))) when get_input = '0' else inA_buff2;
+        write_buff(paths+i) <= bfu_out(to_integer(unsigned(write_ram_switch(paths+i)))) when get_input = '0' else inB_buff2;
     end generate gen_write_switching;
 
 
-    --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes
-    output_valid_buff1 <= generate_output;
-    process(clk)
-    begin
-        if (rising_edge(clk)) then
-            output_valid <= output_valid_buff2;
-            output_valid_buff2 <= output_valid_buff1;
-        end if;
-    end process;
+    --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes --no
+    output_valid <= generate_output;
+    --process(clk)
+    --begin
+    --    if (rising_edge(clk)) then
+    --        output_valid <= output_valid_buff2;
+    --        output_valid_buff2 <= output_valid_buff1;
+    --    end if;
+    --end process;
 
 
 
@@ -198,15 +201,5 @@ begin
         bfu_in(i) <= read_buff(to_integer(unsigned(read_ram_switch(i))));
     end generate gen_read_switching;
 
-    --reverse addresses to simulate permutating except for input to make it natural ordered
-    gen_rev_addr: for i in 0 to N-log2_paths-1 generate
-        reversed_A_addr(i) <= addr_A_write_buff(N-log2_paths-i-1);
-        reversed_B_addr(i) <= addr_B_write_buff(N-log2_paths-i-1);
-        read_A_addr(i) <= addr_A_read_buff(N-log2_paths-i-1);
-        read_B_addr(i) <= addr_B_read_buff(N-log2_paths-i-1);
-    end generate gen_rev_addr;
-
-    write_A_addr <= reversed_A_addr when get_input = '0' else addr_A_write_buff;
-    write_B_addr <= reversed_B_addr;
     
 end fft_b;

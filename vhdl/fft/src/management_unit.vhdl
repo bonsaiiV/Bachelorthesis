@@ -17,21 +17,26 @@ entity management_unit is
          generate_output: out std_logic := '0';
          get_input: out std_logic := '1';
          read_ram_switch, write_ram_switch: out addr_MUX := (others => (others => '0'));
-         write_enable: out std_logic_vector(2*paths-1 downto 0));
+         write_enable: out std_logic_vector(2*paths-1 downto 0);
+         outA_source, outB_source: out std_logic_vector(log2_paths downto 0));
 end management_unit;
 
 architecture management_unit_b of management_unit is
     
     --control signals
-    signal io_done, index_resets, fft_running: std_logic := '0';
+    signal io_is_in: std_logic := '1';
+    signal io_done, is_doing_io, is_doing_io_buff1, is_doing_io_buff2: std_logic := '0'; 
+    signal index_resets, fft_running: std_logic := '0';
     signal is_merging: std_logic := '0';
-    signal fft_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
-    signal is_getting_input, is_getting_input_buff1, is_getting_input_buff2 : std_logic:= '1';
+    signal fft_finished, fft_calc_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
 
     signal io_active_ram: std_logic_vector(log2_paths-2 downto 0) := (others => '0');
+    signal io_write_enable, in_write_enable, write_enable_buff1, write_enable_buff2: std_logic_vector(2*paths-1 downto 0);
 
     signal layer_incr, layer_incr_enable : std_logic:='0';
+    signal io_chunk_incr : std_logic :='0';
 
+    signal discard_bit: std_logic;
     --address generation signals
 
     signal index: std_logic_vector(N-log2_paths-2 downto 0);
@@ -40,9 +45,8 @@ architecture management_unit_b of management_unit is
 
     signal merge_step: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
 
-    signal io_addresses: std_logic_vector(N-log2_paths-1 downto 0);
+    signal io_addresses: std_logic_vector(N-log2_paths-2 downto 0);
     signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0);
-    signal io_write_enable: std_logic_vector(2*paths-1 downto 0);
     signal chunk: std_logic_vector(log2_paths-1 downto 0);
 
     signal write_ram_switch_buff1, write_ram_switch_buff2: addr_MUX := (others => (others => '0'));
@@ -72,62 +76,90 @@ begin
     end process;
 
     gen_rev_io_if: if log2_paths = 1 generate
-        io_write_enable(0) <= '1';
-        io_write_enable(1) <= '0';
-        io_write_enable(2) <= '1';
-        io_write_enable(3) <= '0';
+        in_write_enable(0) <= '1';
+        in_write_enable(1) <= '0';
+        in_write_enable(2) <= '1';
+        in_write_enable(3) <= '0';
     end generate gen_rev_io_if;
 
     gen_rev_io_else: if log2_paths > 1 generate
         io_active_ram <= rev_io_element_nr(N-2 downto N-log2_paths) & '0';
         gen_ram_enable: for i in 0 to paths-1 generate 
-            io_write_enable(i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
-            io_write_enable(paths + i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
+            in_write_enable(i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
+            in_write_enable(paths + i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
         end generate gen_ram_enable;
     end generate gen_rev_io_else;
 
-    write_enable <= io_write_enable when is_getting_input_buff2 = '1' else (others => '1');
-
-
-    process(fft_start, fft_finished) 
+    io_write_enable <= in_write_enable when io_is_in = '1' else (others => '0');
+    write_enable_buff1 <= io_write_enable when is_doing_io = '1' else (others => '1');
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            write_enable_buff2 <= write_enable_buff1;
+            write_enable <= write_enable_buff2;
+        end if;
+    end process;
+    process(fft_start, fft_calc_finished) 
     begin
         if(fft_start = '1') then
+            io_is_in <= '1';
+        elsif(fft_calc_finished = '1') then
+            io_is_in <= '0';
+        end if;
+    end process;
+
+    process(io_done, fft_calc_finished) 
+    begin
+        if(fft_calc_finished = '1') then
             generate_output <= '1';
-        elsif(fft_finished = '1') then
+        elsif(io_done = '1') then
             generate_output <= '0';
         end if;
     end process;
-    generate_output <= '1' when to_integer(unsigned(layer)) = n-1 else '0';
 
     process(clk)
     begin
         if(rising_edge(clk)) then
-            layer_incr_enable <= not is_getting_input;
+            --no issues arise during idle since there is no impulse from the index counter to increase the layer counter
+            layer_incr_enable <= not is_doing_io;
         end if;
     end process;
 
-    process(fft_finished, index_resets)
+    process(fft_calc_finished, io_done, fft_start)
     begin
-        if(fft_finished = '1') then
-            is_getting_input <= '1';
+        if(fft_calc_finished = '1' or fft_start = '1') then
+            is_doing_io <= '1';
         elsif(io_done = '1') then
-            is_getting_input <= '0';
+            is_doing_io <= '0';
         end if;
     end process;
 
-    get_input <= is_getting_input_buff2;
+    get_input <= is_doing_io_buff2;
+
+    process(io_done, fft_start)
+    begin
+        if(io_done = '1') then
+            if(io_is_in = '0') then
+                fft_finished <= '1';
+            end if;
+        elsif(fft_start = '1') then
+            fft_finished <= '0';
+        end if;
+    end process;
 
     process(clk)
     begin
         if(rising_edge(clk)) then
             -- this buffer is important since bfu is 2 cycles
-            is_getting_input_buff1 <= is_getting_input;
-            is_getting_input_buff2 <= is_getting_input_buff1;
+            is_doing_io_buff1 <= is_doing_io;
+            is_doing_io_buff2 <= is_doing_io_buff1;
 
         end if;
     end process;
 
     is_merging <= '1' when to_integer(unsigned(layer)) >= n-log2_paths-1 else '0';
+
+    io_chunk_incr <= index_resets or fft_finished;
 
 
 
@@ -144,8 +176,8 @@ begin
             max => paths-1
         )
         port map (
-            enable => is_getting_input,
-            clr => fft_finished,
+            enable => is_doing_io,
+            clr => io_done,
             clk => index_resets,
             value => chunk,
             resets => io_done
@@ -158,10 +190,10 @@ begin
         )
         port map (
             enable => is_merging,
-            clr => fft_finished,
+            clr => is_doing_io,
             clk => index_resets,
             value => merge_step,
-            resets => fft_finished
+            resets => fft_calc_finished
         );
 
     Index_cnt: counter
@@ -187,7 +219,7 @@ begin
             clr => fft_finished,
             clk => index_resets,
             value => layer,
-            resets => fft_finished
+            resets => discard_bit
         );
     
     io_element_nr <= chunk & index;
@@ -196,11 +228,12 @@ begin
         rev_io_element_nr(i) <= io_element_nr(N-2-i);
     end generate gen_rev_io;
 
-    io_addresses <= rev_io_element_nr(N-log2_paths-1 downto 0);
+    io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0);
+    outA_source <= io_element_nr(N-2 downto N-log2_paths-1) & '0'; --& 0 means reading output from slot A of the ram
+    outB_source <= io_element_nr(N-2 downto N-log2_paths-1) & '1';
 
-
-    addr_A_read <= ram_A_addresses;
-    addr_B_read <= ram_B_addresses;
+    addr_A_read <= io_element_nr(N-log2_paths-2 downto 0) & '0' when is_doing_io = '1' else ram_A_addresses;
+    addr_B_read <= io_element_nr(N-log2_paths-2 downto 0) & '1' when is_doing_io = '1' else ram_B_addresses;
     
     --when merging, ram elements are taken in order since permutation happens on ram level not address level
     ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_merging = '0' else index & '0';
@@ -218,8 +251,8 @@ begin
     end process;
 
 
-    addr_A_write_buff1 <= io_addresses when is_getting_input = '1' else ram_A_addresses;
-    addr_B_write_buff1 <= io_addresses when is_getting_input = '1' else ram_B_addresses;
+    addr_A_write_buff1 <= rev_io_element_nr(N-log2_paths-1 downto 0) when is_doing_io = '1' else ram_A_addresses;
+    addr_B_write_buff1 <= rev_io_element_nr(N-log2_paths-1 downto 0) when is_doing_io = '1' else ram_B_addresses;
 
     gen_ram_switch: for i in 0 to 2*(log2_paths+1)-1 generate
             read_ram_switch(i) <= std_logic_vector(to_unsigned(i, log2_paths+1) ROL to_integer(unsigned(merge_step)));
@@ -235,9 +268,13 @@ begin
         end if;
     end process;
 
+    --todo twiddle gen for multiple paths
+    gen_rev_index: for i in 0 to N-log2_paths-2 generate
+        rev_index(i) <= index(N-log2_paths-i);
+    end generate gen_rev_index;
 
     --twiddle
-    twiddle_addr <= '0' & (index and twiddle_mask(N-log2_paths-2 downto 0));
+    twiddle_addr <= '0' & (rev_index and twiddle_mask(N-log2_paths-2 downto 0));
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;
