@@ -17,19 +17,18 @@ architecture counter_b of counter is
 begin
 
 process(clk) begin
-    if rising_edge(clk) then
-        if(enable='1')then
-            if clr = '1' then
+    if clr = '1' then
+        count <= (others => '0');
+        resets <= '0';
+    elsif rising_edge(clk) then
+        
+        if(enable = '1') then
+            if count = max then
                 count <= (others => '0');
-                resets <= '0';
+                resets <= '1';
             else
-                if count = max then
-                    count <= (others => '0');
-                    resets <= '1';
-                else
-                    count <= count + 1;
-                    resets <= '0';
-                end if;
+                count <= count + 1;
+                resets <= '0';
             end if;
         end if;
     end if;
