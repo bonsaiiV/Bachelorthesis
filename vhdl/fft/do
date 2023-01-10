@@ -28,7 +28,7 @@ exit
 else
 echo "Build OK"
 fi
-ghdl -r $tbfile --vcd=testbench.vcd
+ghdl -r $tbfile --vcd=testbench.vcd --stop-time=100ns
 if [ $? != 0 ];
 then
 echo "Run Failed"
