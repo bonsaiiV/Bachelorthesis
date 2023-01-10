@@ -120,7 +120,9 @@ begin
         write_enable => write_enable,
         get_input => get_input,
         read_ram_switch => read_ram_switch, 
-        write_ram_switch => write_ram_switch
+        write_ram_switch => write_ram_switch,
+        outA_source => outA_source,
+        outB_source => outB_source
     );
     gen_bfu: for i in 0 to paths-1 generate
         bfu: butterfly
