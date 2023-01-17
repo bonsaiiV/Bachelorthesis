@@ -11,7 +11,7 @@ entity management_unit is
             log2_paths: integer:=1;
             paths: integer:=2); --amount of splits in paths of fft
     port(fft_start, clk: in std_logic;
-         twiddle_addr: out std_logic_vector(N-2 downto 0) := (others => '0');
+         twiddle_addr: out twiddle_addr_ARRAY := (others => (others => '0'));
          addr_A_read, addr_A_write: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
          addr_B_read, addr_B_write: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '1');
          generate_output: out std_logic := '0';
@@ -39,11 +39,11 @@ architecture management_unit_b of management_unit is
     signal discard_bit: std_logic;
     --address generation signals
 
-    signal index: std_logic_vector(N-log2_paths-2 downto 0);
+    signal index, rev_index: std_logic_vector(N-log2_paths-2 downto 0);
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
     signal ram_A_addresses, ram_B_addresses, addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
-    signal merge_step: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
+    signal merge_step, merge_zero: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
 
     signal io_addresses: std_logic_vector(N-log2_paths-2 downto 0);
     signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0);
@@ -52,8 +52,12 @@ architecture management_unit_b of management_unit is
     signal write_ram_switch_buff1, write_ram_switch_buff2: addr_MUX := (others => (others => '0'));
 
     --twiddle address signals
-    signal twiddle_mask: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
-    signal tmp_mask, constant_mask: std_logic_vector(N-log2_paths-1 downto 0) := ('1', others => '0');
+    signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
+    signal constant_mask: std_logic_vector(N-1 downto 0) := ('1', others => '0'); 
+    type path_index_ARRAY is array(0 to paths-1) of std_logic_vector(log2_paths-1 downto 0);
+    signal rev_path_index, merge_step_dependend_path_index, tmp_path_index: path_index_ARRAY;
+
+    signal layer_independend_twiddle_addr, full_index: twiddle_addr_ARRAY;
 
 
     component counter
@@ -236,8 +240,8 @@ begin
     addr_B_read <= io_element_nr(N-log2_paths-2 downto 0) & '1' when is_doing_io = '1' else ram_B_addresses;
     
     --when merging, ram elements are taken in order since permutation happens on ram level not address level
-    ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_merging = '0' else index & '0';
-    ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_merging = '0' else index & '1';
+    ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '0';
+    ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '1';
     process(clk)
     begin
         if(rising_edge(clk)) then
@@ -270,11 +274,21 @@ begin
 
     --todo twiddle gen for multiple paths
     gen_rev_index: for i in 0 to N-log2_paths-2 generate
-        rev_index(i) <= index(N-log2_paths-i);
+        rev_index(i) <= index(N-log2_paths-2-i);
     end generate gen_rev_index;
 
     --twiddle
-    twiddle_addr <= '0' & (rev_index and twiddle_mask(N-log2_paths-2 downto 0));
+    --TODO figure out this stupid casting
+    gen_twiddle_addr: for path_index in 0 to paths-1 generate
+        tmp_path_index(path_index) <= std_logic_vector(to_unsigned(path_index, log2_paths));
+        gen_rev_path_index: for i in 0 to log2_paths-1 generate
+            rev_path_index(path_index)(log2_paths-1-i) <= tmp_path_index(path_index)(i);
+        end generate gen_rev_path_index;
+        merge_step_dependend_path_index(path_index) <= std_logic_vector(unsigned(unsigned(rev_path_index(path_index)) ROR 1) ROL to_integer(unsigned(merge_step)));
+        full_index(path_index) <= index & merge_step_dependend_path_index(path_index);
+        layer_independend_twiddle_addr(path_index) <= full_index(path_index) when merge_step = merge_zero else std_logic_vector((unsigned(full_index(path_index)) ROL 1) ROR to_integer(unsigned(merge_step)));
+        twiddle_addr(path_index) <= (layer_independend_twiddle_addr(path_index) and twiddle_mask(N-2 downto 0));
+    end generate gen_twiddle_addr;
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;

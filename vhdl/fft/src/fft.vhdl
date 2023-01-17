@@ -48,9 +48,9 @@ architecture fft_b of fft is
     signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
     --twiddle signals
-
-    signal twiddle_addr: std_logic_vector(N-2 downto 0) := (others => '0');
-    signal twiddle: std_logic_vector(2*width_twiddle-1 downto 0) := (others => '0');
+    type TWIDS is array (0 to paths-1) of std_logic_vector(2*width_twiddle-1 downto 0);
+    signal twiddle_addr: twiddle_addr_ARRAY := (others => (others => '0'));
+    signal twiddle: TWIDS := (others => (others => '0'));
 
     --components 
 
@@ -61,7 +61,7 @@ architecture fft_b of fft is
         log2_paths: integer;
         paths: integer);
     port(fft_start, clk: in std_logic;
-        twiddle_addr: out std_logic_vector(N-2 downto 0);
+        twiddle_addr: out twiddle_addr_ARRAY;
         addr_A_read, addr_B_read, addr_A_write, addr_B_write: out std_logic_vector(N-log2_paths-1 downto 0);
         generate_output: out std_logic;
         get_input: out std_logic;
@@ -124,7 +124,7 @@ begin
         outA_source => outA_source,
         outB_source => outB_source
     );
-    gen_bfu: for i in 0 to paths-1 generate
+    gen_path: for i in 0 to paths-1 generate
         bfu: butterfly
         generic map(
             width_A => width,
@@ -134,7 +134,7 @@ begin
             clk => clk,
             inA => bfu_in(2*i),
             outA => bfu_out(2*i),
-            twiddle => twiddle,
+            twiddle => twiddle(i),
             inB => bfu_in(2*i+1),
             outB => bfu_out(2*i+1)
         );
@@ -156,16 +156,17 @@ begin
             read_A => read_buff(2*i), 
             read_B => read_buff(2*i+1)
         );
-    end generate gen_bfu;
-    twiddle_rom: rom
-    generic map (
-        width => 2*width_twiddle,
-        length => N - 1
-    )
-    port map (
-        addr => twiddle_addr,
-        value => twiddle
-    );
+        twiddle_rom: rom
+        generic map (
+            width => 2*width_twiddle,
+            length => N - 1
+        )
+        port map (
+            addr => twiddle_addr(i),
+            value => twiddle(i)
+        );
+    end generate gen_path;
+
 
     --IO
     outA <= read_buff(to_integer(unsigned(outA_source)));
