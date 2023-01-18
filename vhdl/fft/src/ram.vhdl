@@ -13,7 +13,7 @@ entity ram is
 end ram;
 
 architecture ram_b of ram is
-    type MEMORY is array(0 to 7) of std_logic_vector(width-1 downto 0);
+    type MEMORY is array(0 to 2**length-1) of std_logic_vector(width-1 downto 0);
     signal ram_mem :MEMORY := (others => (others => '0'));
 begin
     process(clk)

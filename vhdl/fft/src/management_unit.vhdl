@@ -87,7 +87,7 @@ begin
     end generate gen_rev_io_if;
 
     gen_rev_io_else: if log2_paths > 1 generate
-        io_active_ram <= rev_io_element_nr(N-2 downto N-log2_paths) & '0';
+        io_active_ram <= rev_io_element_nr(N-2 downto N-log2_paths+1) & '0';
         gen_ram_enable: for i in 0 to paths-1 generate 
             in_write_enable(i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
             in_write_enable(paths + i) <= '1' when to_integer(unsigned(io_active_ram)) = i else '0';
