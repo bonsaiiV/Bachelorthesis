@@ -108,8 +108,14 @@ int main(int argc, char * argv[]){
     }
     char * ret = malloc( sizeof(char) * (1<<(fft_length-1)) * (2*bits+3));
     generate_twiddle(fft_length, bits, ret);
-
-    printf("%s%s%s",first_part,ret,second_part);
+	FILE * outFile;
+	outFile = fopen(output_file, "w");
+	if (outFile == NULL){
+		printf("failed to open output-file");
+		exit(EXIT_FAILURE);
+	}
+    fprintf(outFile, "%s%s%s",first_part,ret,second_part);
+	fclose(outFile);
     free(ret);
     
 }
