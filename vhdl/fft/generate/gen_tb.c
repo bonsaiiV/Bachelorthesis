@@ -163,12 +163,7 @@ int main(int argc, char * argv[]){
     read_input(input_file ,signal, bits, fft_length);
     char * ret = malloc(sizeof(char) * ((fft_length+10 )* total_len)+1);
     char * ret_ptr = ret;
-    char * test = malloc(sizeof(char)*60);
     printf("%d\n", fft_length);
-    int2bit(120, test, 19);
-    test[19] = 'w';
-    test[20] = '\0';
-    printf("%s\n", test);
     for (int i = 0; i < fft_length >> 1; i++){
         //printf("%d\n", i);
         strncpy(ret_ptr , "inA<=\"",6); 
@@ -181,7 +176,7 @@ int main(int argc, char * argv[]){
         int2bit(signal[2*i+1], ret_ptr + line_length + bits + len_misc-3, bits);
         strncpy(ret_ptr+line_length+2*bits+len_misc-3, "\";\n",3);
 
-        if(i<fft_length-1)strncpy(ret_ptr+line_length+2*bits+len_misc,clock_cycle, 54);
+        if(i<(fft_length/2)-1)strncpy(ret_ptr+line_length+2*bits+len_misc,clock_cycle, 54);
         else strncpy(ret_ptr+line_length+2*bits+len_misc,"", 1);
 
         ret_ptr += total_len;

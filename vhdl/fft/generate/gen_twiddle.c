@@ -21,8 +21,6 @@ char * first_part =
         "    signal rom_mem :MEMORY :=(\n";
 char * second_part =
         ");\n"
-        "attribute rom_style : string;\n"
-        "   attribute rom_style of rom_mem : signal is \"block\";"
         "begin\n"
         "    value <= rom_mem(to_integer(unsigned(addr)));\n"
         "end rom_b;\n";
