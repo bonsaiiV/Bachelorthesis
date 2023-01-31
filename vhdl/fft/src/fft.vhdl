@@ -169,15 +169,9 @@ begin
     end generate gen_write_switching;
 
 
-    --output valid need to be delayed, since it rises once the last cycle starts and not when the first element of it finishes --no
+
     output_valid <= generate_output;
-    --process(clk)
-    --begin
-    --    if (rising_edge(clk)) then
-    --        output_valid <= output_valid_buff2;
-    --        output_valid_buff2 <= output_valid_buff1;
-    --    end if;
-    --end process;
+
 
 
 
