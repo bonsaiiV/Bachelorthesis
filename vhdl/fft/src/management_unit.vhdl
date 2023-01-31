@@ -12,8 +12,8 @@ entity management_unit is
             paths: integer:=2); --amount of splits in paths of fft
     port(fft_start, clk: in std_logic;
          twiddle_addr: out twiddle_addr_ARRAY := (others => (others => '0'));
-         addr_A_read, addr_A_write: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
-         addr_B_read, addr_B_write: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '1');
+         addr_A: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
+         addr_B: out std_logic_vector(N-log2_paths-1 downto 0) := (others => '1');
          generate_output: out std_logic := '0';
          get_input: out std_logic := '1';
          read_ram_switch, write_ram_switch: out addr_MUX := (others => (others => '0'));
@@ -41,15 +41,14 @@ architecture management_unit_b of management_unit is
 
     signal index, rev_index: std_logic_vector(N-log2_paths-2 downto 0);
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
-    signal ram_A_addresses, ram_B_addresses, addr_A_write_buff1, addr_B_write_buff1, addr_A_write_buff2, addr_B_write_buff2: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
+    signal ram_A_addresses, ram_B_addresses: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
     signal merge_step, merge_zero: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
 
-    signal io_addresses: std_logic_vector(N-log2_paths-2 downto 0);
+    signal io_addr_A, io_addr_B: std_logic_vector(N-log2_paths-1 downto 0);
     signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0);
     signal chunk: std_logic_vector(log2_paths-1 downto 0);
 
-    signal write_ram_switch_buff1, write_ram_switch_buff2: addr_MUX := (others => (others => '0'));
 
     --twiddle address signals
     signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
@@ -232,45 +231,28 @@ begin
         rev_io_element_nr(i) <= io_element_nr(N-2-i);
     end generate gen_rev_io;
 
-    io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0);
-    outA_source <= io_element_nr(N-2 downto N-log2_paths-1) & '0'; --& 0 means reading output from slot A of the ram
+    --io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0);
+    outA_source <= io_element_nr(N-2 downto N-log2_paths-1) & '0'; --appending 0 means reading output from slot A of the ram
     outB_source <= io_element_nr(N-2 downto N-log2_paths-1) & '1';
 
-    addr_A_read <= io_element_nr(N-log2_paths-2 downto 0) & '0' when is_doing_io = '1' else ram_A_addresses;
-    addr_B_read <= io_element_nr(N-log2_paths-2 downto 0) & '1' when is_doing_io = '1' else ram_B_addresses;
+
     
     --when merging, ram elements are taken in order since permutation happens on ram level not address level
     ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '0';
     ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '1';
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            addr_A_write <= addr_A_write_buff2;
-            addr_B_write <= addr_B_write_buff2;
 
-            addr_A_write_buff2 <= addr_A_write_buff1;
-            addr_B_write_buff2 <= addr_B_write_buff1;
-            
-        end if;
-    end process;
+    io_addr_A <= rev_io_element_nr(N-log2_paths-1 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0) & '0';
+    io_addr_B <= rev_io_element_nr(N-log2_paths-1 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0) & '1';
 
-
-    addr_A_write_buff1 <= rev_io_element_nr(N-log2_paths-1 downto 0) when is_doing_io = '1' else ram_A_addresses;
-    addr_B_write_buff1 <= rev_io_element_nr(N-log2_paths-1 downto 0) when is_doing_io = '1' else ram_B_addresses;
+    addr_A <= io_addr_A when is_doing_io = '1' else ram_A_addresses;
+    addr_B <= io_addr_B when is_doing_io = '1' else ram_B_addresses;
 
     gen_ram_switch: for i in 0 to 2*(log2_paths+1)-1 generate
             read_ram_switch(i) <= std_logic_vector(to_unsigned(i, log2_paths+1) ROL to_integer(unsigned(merge_step)));
-            write_ram_switch_buff2(i) <= std_logic_vector(to_unsigned(i, log2_paths+1) ROR to_integer(unsigned(merge_step)));
+            write_ram_switch(i) <= std_logic_vector(to_unsigned(i, log2_paths+1) ROR to_integer(unsigned(merge_step)));
     end generate gen_ram_switch;
 
 
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            write_ram_switch_buff1 <= write_ram_switch_buff2;
-            write_ram_switch <= write_ram_switch_buff1;
-        end if;
-    end process;
 
     --todo twiddle gen for multiple paths
     gen_rev_index: for i in 0 to N-log2_paths-2 generate
