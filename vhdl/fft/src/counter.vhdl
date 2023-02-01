@@ -16,7 +16,7 @@ architecture counter_b of counter is
 
 begin
 
-process(clk) begin
+process(clk, clr) begin
     if clr = '1' then
         count <= (others => '0');
         resets <= '0';
