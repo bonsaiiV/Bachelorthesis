@@ -1,8 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-library fft_types;
-use fft_types.types.all;
+library xil_defaultlib;
+use xil_defaultlib.types.all;
 
 entity fft is
     generic(N : integer := 3;
