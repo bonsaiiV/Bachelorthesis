@@ -230,4 +230,12 @@ while output_valid = '0' loop
             wait for 1 ns;
             clk <= '0';
         end loop;
-        for i in 0 to 
+        for i in 0 to 32 loop
+        wait for 1 ns;
+            clk <= '1';
+            wait for 1 ns;
+            clk <= '0';
+        end loop;
+        wait;
+    end process;
+end test;

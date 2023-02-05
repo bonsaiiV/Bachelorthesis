@@ -1,3 +1,5 @@
+all: gen_twiddle gen_tb
+	:
 gen_twiddle: bin/gen_twiddle
 	:
 bin/gen_twiddle: bin/gen_twiddle.o
@@ -11,3 +13,5 @@ bin/gen_tb: bin/gen_tb.o
 	gcc bin/gen_tb.o -o bin/gen_tb
 bin/gen_tb.o: gen_tb.c
 	gcc -c -o bin/gen_tb.o gen_tb.c
+clean:
+	rm bin/*

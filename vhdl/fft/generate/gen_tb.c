@@ -206,6 +206,7 @@ void gen_code_out(){
 
     char flh_str[length_flh];
     snprintf(flh_str, length_flh, "%d", fft_length_half);
+    strncpy(code_string_out_ptr, flh_str, length_flh);
     code_string_out_ptr += length_flh;
 
     strncpy(code_string_out_ptr, code_string_out_end, 164);
