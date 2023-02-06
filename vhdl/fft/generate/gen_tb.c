@@ -8,20 +8,23 @@ int bits;
 int fft_n;
 char * input_file = "";
 
-char * code_string_head = 
+char * code_string_head;
+char * code_string_head_start = 
 "library ieee;\n"
 "use ieee.std_logic_1164.all;\n"
 "entity fft_tb is\n"
 "end fft_tb;\n"
 "architecture test of fft_tb is\n"
 "    component fft\n"
-"    generic(N : integer;\n"
-"            width :integer);\n"
 "    port (\n"
 "       clk, fft_start: in std_logic;\n"
 "       output_valid : out std_logic;\n"
-"       inA, inB : in std_logic_vector(2*width-1 downto 0);\n"
-"       outA, outB: out std_logic_vector(2*width-1 downto 0));\n"
+"       inA, inB : in std_logic_vector(";
+char * code_string_head_midline =
+" downto 0);\n"
+"       outA, outB: out std_logic_vector(";
+char * code_string_head_end =
+" downto 0));\n"
 "    end component;\n";
 
 char * code_string_signals;
@@ -29,16 +32,8 @@ char * code_string_signals_end =
 " downto 0) := (others =>'0');\n"
 "    signal clk, fft_start : std_logic := '0';\n"
 "    signal output_valid : std_logic;\n"
-"begin\n";
-
-char * code_string_component;
-char * code_string_component_1 =
+"begin\n"
 "    fft_i: fft\n"
-"    generic map (\n"
-"        width => ";
-char * code_string_component_2 =
-"\n"
-"    )\n"
 "    port map (\n"
 "        clk => clk,\n"
 "        fft_start => fft_start,\n"
@@ -122,11 +117,41 @@ void get_int(int * target, char * source, char option){
         exit(EXIT_FAILURE);
     }
 }
+
+void gen_code_head(){
+    int length_csh_start = 245 - 1; //-1 to avoid copying \0 termination
+    int length_csh_midline = 53 - 1;
+    int length_csh_end = 33; //no -1 since it is the last part
+    int width_signal = 2*bits;
+    int length_width_signal = snprintf(NULL, 0, "%d", width_signal-1);
+
+    code_string_head = malloc(length_csh_start + length_width_signal + length_csh_midline + length_width_signal + length_csh_end);
+    char * code_string_head_ptr = code_string_head;
+
+    strncpy(code_string_head_ptr, code_string_head_start, length_csh_start);
+    code_string_head_ptr += length_csh_start;
+
+    char width_str[length_width_signal+1];
+    snprintf(width_str, length_width_signal+1, "%d", width_signal);
+    strncpy(code_string_head_ptr, width_str, length_width_signal);
+    code_string_head_ptr += length_width_signal;
+
+    strncpy(code_string_head_ptr, code_string_head_midline, length_csh_midline);
+    code_string_head_ptr += length_csh_midline;
+
+    char fft_n_str[length_width_signal+1];
+    snprintf(fft_n_str, length_width_signal+1, "%d", width_signal);
+    strncpy(code_string_head_ptr, fft_n_str, length_width_signal);
+    code_string_head_ptr += length_width_signal;
+
+    strncpy(code_string_head_ptr, code_string_head_end, length_csh_end);
+}
+
 void gen_code_signals(){
     int data_signal_width = 2*bits;
     int length_dsw = snprintf(NULL, 0, "%d", data_signal_width-1); //dsw = data signal width
 
-    code_string_signals = malloc(47 + length_dsw + 120);
+    code_string_signals = malloc(47 + length_dsw + 459);
     char * code_string_signals_ptr = code_string_signals;
 
     strncpy(code_string_signals_ptr, "signal inA, inB, outA, outB : std_logic_vector(",47);
@@ -137,33 +162,9 @@ void gen_code_signals(){
     strncpy(code_string_signals_ptr, dsw_str, length_dsw);
     code_string_signals_ptr += length_dsw;
 
-    strncpy(code_string_signals_ptr, code_string_signals_end, 120);
+    strncpy(code_string_signals_ptr, code_string_signals_end, 459);
 }
-void gen_code_component(){
-    int length_width = snprintf(NULL, 0, "%d", bits-1);
-    int length_n = snprintf(NULL, 0, "%d", fft_n);
 
-    code_string_component = malloc(50 + length_width + 17 + length_n + 332);
-    char * code_string_component_ptr = code_string_component;
-
-    strncpy(code_string_component_ptr, code_string_component_1, 50);
-    code_string_component_ptr += 50;
-
-    char width_str[length_width+1];
-    snprintf(width_str, length_width+1, "%d", bits-1);
-    strncpy(code_string_component_ptr, width_str, length_width);
-    code_string_component_ptr += length_width;
-
-    strncpy(code_string_component_ptr, ",\n        N => ", 15);
-    code_string_component_ptr += 15;
-
-    char fft_n_str[length_n+1];
-    snprintf(fft_n_str, length_n+1, "%d", fft_n);
-    strncpy(code_string_component_ptr, fft_n_str, length_n);
-    code_string_component_ptr += length_n;
-
-    strncpy(code_string_component_ptr, code_string_component_2, 332);
-}
 void gen_code_inputs(){
     int len_misc = 9;
     int line_length = 2*bits+len_misc;
@@ -205,7 +206,7 @@ void gen_code_out(){
     code_string_out_ptr += 22;
 
     char flh_str[length_flh];
-    snprintf(flh_str, length_flh, "%d", fft_length_half);
+    snprintf(flh_str, length_flh+1, "%d", fft_length_half);
     strncpy(code_string_out_ptr, flh_str, length_flh);
     code_string_out_ptr += length_flh;
 
@@ -260,8 +261,8 @@ int main(int argc, char * argv[]){
     fft_length = (1<<fft_n);
     
     printf("%d\n", fft_length);
+    gen_code_head();
     gen_code_signals();
-    gen_code_component();
     gen_code_inputs();
     gen_code_out();
 
@@ -272,12 +273,12 @@ int main(int argc, char * argv[]){
         exit(EXIT_FAILURE);
     }
     
-    fprintf(outFile, "%s%s%s%s%s%s", code_string_head, code_string_signals, code_string_component, code_string_inputs, code_string_run, code_string_out);
+    fprintf(outFile, "%s%s%s%s%s", code_string_head, code_string_signals, code_string_inputs, code_string_run, code_string_out);
 
     fclose(outFile);
 
+    free(code_string_head);
     free(code_string_signals);
-    free(code_string_component);
     free(code_string_inputs);
     free(code_string_out);
     
