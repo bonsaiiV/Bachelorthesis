@@ -104,18 +104,18 @@ begin
     end process;
     process(fft_start, fft_calc_finished) 
     begin
-        if(fft_start = '1') then
+        if(rising_edge(fft_start)) then
             io_is_in <= '1';
-        elsif(fft_calc_finished = '1') then
+        elsif(rising_edge(fft_calc_finished)) then
             io_is_in <= '0';
         end if;
     end process;
 
     process(io_done, fft_calc_finished) 
     begin
-        if(fft_calc_finished = '1') then
+        if(rising_edge(fft_calc_finished)) then
             generate_output <= '1';
-        elsif(io_done = '1') then
+        elsif(rising_edge(io_done)) then
             generate_output <= '0';
         end if;
     end process;
@@ -130,9 +130,9 @@ begin
 
     process(fft_calc_finished, io_done, fft_start)
     begin
-        if(fft_calc_finished = '1' or fft_start = '1') then
+        if(rising_edge(fft_calc_finished) or rising_edge(fft_start)) then
             is_doing_io <= '1';
-        elsif(io_done = '1') then
+        elsif(rising_edge(io_done)) then
             is_doing_io <= '0';
         end if;
     end process;
@@ -141,11 +141,11 @@ begin
 
     process(io_done, fft_start)
     begin
-        if(io_done = '1') then
+        if(rising_edge(io_done)) then
             if(io_is_in = '0') then
                 fft_finished <= '1';
             end if;
-        elsif(fft_start = '1') then
+        elsif(rising_edge(fft_start)) then
             fft_finished <= '0';
         end if;
     end process;
