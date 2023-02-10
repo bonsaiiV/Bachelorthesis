@@ -95,18 +95,20 @@ begin
 
     io_write_enable <= in_write_enable when io_is_in = '1' else (others => '0');
     write_enable <= io_write_enable when is_doing_io = '1' else (others => '1');
+    --this process should be acting on rising edges in both cases, vivado cant handle that, maybe there is a better way i don't know one
+    --other processes have the same issue
     process(fft_start, fft_calc_finished) 
     begin
-        if(rising_edge(fft_start)) then
-            io_is_in <= '1';
-        elsif(rising_edge(fft_calc_finished)) then
+        if(fft_calc_finished = '1') then
             io_is_in <= '0';
+        elsif(rising_edge(fft_start)) then
+            io_is_in <= '1';
         end if;
     end process;
 
     process(io_done, fft_calc_finished) 
     begin
-        if(rising_edge(fft_calc_finished)) then
+        if(fft_calc_finished = '1') then
             generate_output <= '1';
         elsif(rising_edge(io_done)) then
             generate_output <= '0';
@@ -134,7 +136,7 @@ begin
 
     process(io_done, fft_start)
     begin
-        if(rising_edge(io_done)) then
+        if(io_done = '1') then
             if(io_is_in = '0') then
                 fft_finished <= '1';
             end if;
