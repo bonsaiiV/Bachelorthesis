@@ -94,14 +94,7 @@ begin
     end generate gen_rev_io_else;
 
     io_write_enable <= in_write_enable when io_is_in = '1' else (others => '0');
-    write_enable_buff1 <= io_write_enable when is_doing_io = '1' else (others => '1');
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            write_enable_buff2 <= write_enable_buff1;
-            write_enable <= write_enable_buff2;
-        end if;
-    end process;
+    write_enable <= io_write_enable when is_doing_io = '1' else (others => '1');
     process(fft_start, fft_calc_finished) 
     begin
         if(rising_edge(fft_start)) then
