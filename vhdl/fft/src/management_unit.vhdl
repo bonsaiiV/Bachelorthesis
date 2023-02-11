@@ -150,7 +150,7 @@ begin
         if(rising_edge(clk)) then
             if(fft_calc_finished = '1') then
                 generate_output <= '1';
-            elsif(rising_edge(io_done)) then
+            elsif(io_done = '1') then
                 generate_output <= '0';
             end if;
         end if;
@@ -159,7 +159,6 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            --no issues arise during idle since there is no impulse from the index counter to increase the layer counter
             layer_incr_enable <= index_resets and (not is_doing_io);
         end if;
     end process;
@@ -283,7 +282,6 @@ begin
     end generate gen_rev_index;
 
     --twiddle
-    --TODO figure out this stupid casting
     gen_twiddle_addr: for path_index in 0 to paths-1 generate
         tmp_path_index(path_index) <= std_logic_vector(to_unsigned(path_index, log2_paths));
         gen_rev_path_index: for i in 0 to log2_paths-1 generate
