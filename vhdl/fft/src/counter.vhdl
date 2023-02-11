@@ -16,13 +16,13 @@ architecture counter_b of counter is
 
 begin
 
-process(clk, clr) begin
-    if clr = '1' then
-        count <= (others => '0');
-        resets <= '0';
-    elsif rising_edge(clk) then
-        
-        if(enable = '1') then
+process(clk) begin
+    
+    if rising_edge(clk) then
+        if clr = '1' then
+            count <= (others => '0');
+            resets <= '0';
+        elsif(enable = '1') then
             if count = max then
                 count <= (others => '0');
                 resets <= '1';

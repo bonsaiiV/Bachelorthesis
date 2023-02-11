@@ -27,27 +27,27 @@ architecture management_unit_b of management_unit is
     signal io_is_in: std_logic := '1';
     signal io_done, is_doing_io: std_logic := '0'; 
     signal index_resets, fft_running: std_logic := '0';
+    signal fft_start_impulse: std_logic := '0';
     signal is_merging: std_logic := '0';
     signal fft_finished, fft_calc_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
 
     signal io_active_ram: std_logic_vector(log2_paths-2 downto 0) := (others => '0');
-    signal io_write_enable, in_write_enable, write_enable_buff1, write_enable_buff2: std_logic_vector(2*paths-1 downto 0);
+    signal io_write_enable, in_write_enable: std_logic_vector(2*paths-1 downto 0);
 
     signal layer_incr, layer_incr_enable : std_logic:='0';
-    signal io_chunk_incr : std_logic :='0';
+    signal io_chunk_incr, merge_cnt_incr : std_logic :='0';
 
     signal discard_bit: std_logic;
     --address generation signals
 
-    signal index, rev_index: std_logic_vector(N-log2_paths-2 downto 0);
+    signal index, index_buff1, index_buff2, rev_index: std_logic_vector(N-log2_paths-2 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
     signal ram_A_addresses, ram_B_addresses: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
     signal merge_step, merge_zero: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
-
     signal io_addr_A, io_addr_B: std_logic_vector(N-log2_paths-1 downto 0);
     signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0);
-    signal chunk: std_logic_vector(log2_paths-1 downto 0);
+    signal chunk, chunk_buff: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
 
 
     --twiddle address signals
@@ -69,14 +69,61 @@ architecture management_unit_b of management_unit is
 
 begin
     --managing state of fft
-    process(fft_start, fft_finished) 
+    process(clk) 
     begin
-        if(fft_start = '1') then
-            fft_running <= '1';
-        elsif(fft_finished = '1') then
-            fft_running <= '0';
+        if(rising_edge(clk)) then
+            if(fft_running = '0') then
+                fft_start_impulse <= fft_start;
+            else
+                fft_start_impulse <= '0';
+            end if;
         end if;
     end process;
+
+    process(clk) 
+    begin
+        if(rising_edge(clk)) then
+            if(fft_start_impulse = '1') then
+                fft_running <= '1';
+            elsif(fft_finished = '1') then
+                fft_running <= '0';
+            end if;
+        end if;
+    end process;
+
+    process(clk) 
+    begin
+        if(rising_edge(clk)) then
+            if(io_done = '1') then
+                io_is_in <= not io_is_in;
+            end if;
+        end if;
+    end process;
+
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            if(io_done = '1') then
+                if(io_is_in = '0') then
+                    fft_finished <= '1';
+                end if;
+            elsif(fft_start_impulse = '1') then
+                fft_finished <= '0';
+            end if;
+        end if;
+    end process;
+
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            if(fft_calc_finished = '1' or fft_start_impulse = '1') then
+                is_doing_io <= '1';
+            elsif(io_done = '1') then
+                is_doing_io <= '0';
+            end if;
+        end if;
+    end process;
+
 
     gen_rev_io_if: if log2_paths = 1 generate
         in_write_enable(0) <= '1';
@@ -95,25 +142,17 @@ begin
 
     io_write_enable <= in_write_enable when io_is_in = '1' else (others => '0');
     write_enable <= io_write_enable when is_doing_io = '1' else (others => '1');
-    --this process should be acting on rising edges in both cases, vivado cant handle that, maybe there is a better way i don't know one
-    --other processes have the same issue
+
+
+
     process(clk) 
     begin
         if(rising_edge(clk)) then
             if(fft_calc_finished = '1') then
-                io_is_in <= '0';
-            elsif(rising_edge(fft_start)) then
-                io_is_in <= '1';
+                generate_output <= '1';
+            elsif(rising_edge(io_done)) then
+                generate_output <= '0';
             end if;
-        end if;
-    end process;
-
-    process(io_done, fft_calc_finished) 
-    begin
-        if(fft_calc_finished = '1') then
-            generate_output <= '1';
-        elsif(rising_edge(io_done)) then
-            generate_output <= '0';
         end if;
     end process;
 
@@ -121,36 +160,21 @@ begin
     begin
         if(rising_edge(clk)) then
             --no issues arise during idle since there is no impulse from the index counter to increase the layer counter
-            layer_incr_enable <= not is_doing_io;
+            layer_incr_enable <= index_resets and (not is_doing_io);
         end if;
     end process;
 
-    process(fft_calc_finished, io_done, fft_start)
-    begin
-        if(rising_edge(fft_calc_finished) or rising_edge(fft_start)) then
-            is_doing_io <= '1';
-        elsif(rising_edge(io_done)) then
-            is_doing_io <= '0';
-        end if;
-    end process;
+    
 
     get_input <= is_doing_io;
 
-    process(io_done, fft_start)
-    begin
-        if(io_done = '1') then
-            if(io_is_in = '0') then
-                fft_finished <= '1';
-            end if;
-        elsif(rising_edge(fft_start)) then
-            fft_finished <= '0';
-        end if;
-    end process;
+ 
 
 
     is_merging <= '1' when to_integer(unsigned(layer)) >= n-log2_paths-1 else '0';
 
-    io_chunk_incr <= index_resets or fft_finished;
+    io_chunk_incr <= index_resets and is_doing_io;
+    merge_cnt_incr <= index_resets and is_merging;
 
 
 
@@ -167,10 +191,10 @@ begin
             max => paths-1
         )
         port map (
-            enable => is_doing_io,
+            enable => io_chunk_incr,
             clr => io_done,
-            clk => index_resets,
-            value => chunk,
+            clk => clk,
+            value => chunk_buff,
             resets => io_done
         );
     
@@ -180,9 +204,9 @@ begin
             max => log2_paths
         )
         port map (
-            enable => is_merging,
+            enable => merge_cnt_incr,
             clr => is_doing_io,
-            clk => index_resets,
+            clk => clk,
             value => merge_step,
             resets => fft_calc_finished
         );
@@ -196,7 +220,7 @@ begin
             enable => fft_running,
             clr => fft_finished,
             clk => clk,
-            value => index,
+            value => index_buff1,
             resets => index_resets
         );
 
@@ -208,10 +232,19 @@ begin
         port map(
             enable => layer_incr_enable,
             clr => fft_finished,
-            clk => index_resets,
+            clk => clk,
             value => layer,
             resets => discard_bit
         );
+    --buffering to line signals up
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            chunk <= chunk_buff;
+            index_buff2 <= index_buff1;
+            index <= index_buff2;
+        end if;
+    end process;
     
     io_element_nr <= chunk & index;
 
@@ -234,6 +267,8 @@ begin
 
     addr_A <= io_addr_A when is_doing_io = '1' else ram_A_addresses;
     addr_B <= io_addr_B when is_doing_io = '1' else ram_B_addresses;
+
+    
 
     gen_ram_switch: for i in 0 to 2*(log2_paths+1)-1 generate
             read_ram_switch(i) <= std_logic_vector(to_unsigned(i, log2_paths+1) ROL to_integer(unsigned(merge_step)));

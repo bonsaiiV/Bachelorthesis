@@ -6,7 +6,7 @@ use xil_defaultlib.types.all;
 
 entity fft is
     generic(N : integer := 3;
-            width : integer := 8; 
+            width : integer := 19; 
             width_twiddle : integer := 6;
             log2_paths : integer := 1;
             paths : integer := 2);
