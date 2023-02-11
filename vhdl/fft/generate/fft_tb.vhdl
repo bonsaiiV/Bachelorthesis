@@ -7,8 +7,8 @@ architecture test of fft_tb is
     port (
        clk, fft_start: in std_logic;
        output_valid : out std_logic;
-       inA, inB : in std_logic_vector(38 downto 0);
-       outA, outB: out std_logic_vector(38 downto 0));
+       inA, inB : in std_logic_vector(37 downto 0);
+       outA, outB: out std_logic_vector(37 downto 0));
     end component;
 signal inA, inB, outA, outB : std_logic_vector(37 downto 0) := (others =>'0');
     signal clk, fft_start : std_logic := '0';

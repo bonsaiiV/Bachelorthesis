@@ -122,8 +122,8 @@ void gen_code_head(){
     int length_csh_start = 245 - 1; //-1 to avoid copying \0 termination
     int length_csh_midline = 53 - 1;
     int length_csh_end = 33; //no -1 since it is the last part
-    int width_signal = 2*bits;
-    int length_width_signal = snprintf(NULL, 0, "%d", width_signal-1);
+    int width_signal = 2*bits-1;
+    int length_width_signal = snprintf(NULL, 0, "%d", width_signal);
 
     code_string_head = malloc(length_csh_start + length_width_signal + length_csh_midline + length_width_signal + length_csh_end);
     char * code_string_head_ptr = code_string_head;
