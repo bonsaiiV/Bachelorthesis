@@ -25,7 +25,7 @@ architecture management_unit_b of management_unit is
     
     --control signals
     signal io_is_in: std_logic := '1';
-    signal io_done, is_doing_io, is_doing_io_buff1, is_doing_io_buff2: std_logic := '0'; 
+    signal io_done, is_doing_io: std_logic := '0'; 
     signal index_resets, fft_running: std_logic := '0';
     signal is_merging: std_logic := '0';
     signal fft_finished, fft_calc_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
@@ -97,12 +97,14 @@ begin
     write_enable <= io_write_enable when is_doing_io = '1' else (others => '1');
     --this process should be acting on rising edges in both cases, vivado cant handle that, maybe there is a better way i don't know one
     --other processes have the same issue
-    process(fft_start, fft_calc_finished) 
+    process(clk) 
     begin
-        if(fft_calc_finished = '1') then
-            io_is_in <= '0';
-        elsif(rising_edge(fft_start)) then
-            io_is_in <= '1';
+        if(rising_edge(clk)) then
+            if(fft_calc_finished = '1') then
+                io_is_in <= '0';
+            elsif(rising_edge(fft_start)) then
+                io_is_in <= '1';
+            end if;
         end if;
     end process;
 
@@ -132,7 +134,7 @@ begin
         end if;
     end process;
 
-    get_input <= is_doing_io_buff2;
+    get_input <= is_doing_io;
 
     process(io_done, fft_start)
     begin
@@ -145,15 +147,6 @@ begin
         end if;
     end process;
 
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
-            -- this buffer is important since bfu is 2 cycles
-            is_doing_io_buff1 <= is_doing_io;
-            is_doing_io_buff2 <= is_doing_io_buff1;
-
-        end if;
-    end process;
 
     is_merging <= '1' when to_integer(unsigned(layer)) >= n-log2_paths-1 else '0';
 
