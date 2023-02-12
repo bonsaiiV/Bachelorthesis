@@ -35,6 +35,7 @@ architecture fft_b of fft is
     signal read_buff: MUX := (others => (others => '0'));
     signal write_buff: MUX := (others => (others => '0'));
     signal bfu_in, bfu_out: MUX := (others => (others => '0'));
+    signal inA_buff1, inB_buff1, inA_buff2, inB_buff2, inA_buff3, inB_buff3:  std_logic_vector(2*width-1 downto 0);
 
     --address signals
 
@@ -168,14 +169,25 @@ begin
         );
     end generate gen_path;
 
-
+    --buffering inputs, because mu needs a few cicles to get ready
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            inA_buff1 <= inA;
+            inA_buff2 <= inA_buff1;
+            inA_buff3 <= inA_buff2;
+            inB_buff1 <= inB;
+            inB_buff2 <= inB_buff1;
+            inB_buff3 <= inB_buff2;
+        end if;
+    end process;
     --IO
     outA <= read_buff(to_integer(unsigned(outA_source)));
     outB <= read_buff(to_integer(unsigned(outB_source)));
 
     gen_write_switching: for i in 0 to paths-1 generate
-        write_buff(i) <= bfu_out(to_integer(unsigned(write_ram_switch(i)))) when get_input = '0' else inA;
-        write_buff(paths+i) <= bfu_out(to_integer(unsigned(write_ram_switch(paths+i)))) when get_input = '0' else inB;
+        write_buff(i) <= bfu_out(to_integer(unsigned(write_ram_switch(i)))) when get_input = '0' else inA_buff3;
+        write_buff(paths+i) <= bfu_out(to_integer(unsigned(write_ram_switch(paths+i)))) when get_input = '0' else inB_buff3;
     end generate gen_write_switching;
 
 

@@ -196,7 +196,7 @@ begin
 
     io_chunk_incr <= index_resets and is_doing_io;
  
-    index_clr <= fft_finished or (index_resets and not is_doing_io); 
+    index_clr <= index_resets when to_integer(unsigned(chunk)) = paths-1 or is_doing_io = '0' else '0'; 
 
 
 
@@ -216,7 +216,7 @@ begin
             enable => io_chunk_incr,
             clr => io_done,
             clk => clk,
-            value => chunk_buff,
+            value => chunk,
             resets => io_done
         );
     
@@ -227,7 +227,7 @@ begin
         )
         port map (
             enable => merge_cnt_incr,
-            clr => is_doing_io,
+            clr => fft_calc_finished,
             clk => clk,
             value => merge_step,
             resets => fft_calc_finished
@@ -262,7 +262,7 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            chunk <= chunk_buff;
+            --chunk <= chunk_buff;
             --index_buff2 <= index_buff1;
             index <= index_buff1;
             addr_A_write <= addr_A;
@@ -277,8 +277,13 @@ begin
     end generate gen_rev_io;
 
     --io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0);
-    outA_source <= io_element_nr(N-2 downto N-log2_paths-1) & '0'; --appending 0 means reading output from slot A of the ram
-    outB_source <= io_element_nr(N-2 downto N-log2_paths-1) & '1';
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            outA_source <= io_element_nr(N-2 downto N-log2_paths-1) & '0'; --appending 0 means reading output from slot A of the ram
+            outB_source <= io_element_nr(N-2 downto N-log2_paths-1) & '1';
+        end if;
+    end process;
 
     select_bank_out <= select_bank_buff;
     process(clk)
