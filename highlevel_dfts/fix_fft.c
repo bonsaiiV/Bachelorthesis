@@ -419,7 +419,7 @@ int main(int argc, char *argv[]){
                 tmp2 = unfix(sensor2[burst][real(r_index)]) * unfix(sensor2[burst][real(r_index)]) + unfix(sensor2[burst][imag(r_index)])*unfix(sensor2[burst][imag(r_index)]);
 
 
-                output[i] += (tmp1-tmp2)/number_of_bursts;
+                output[i] += (tmp1)/number_of_bursts;
             }
         }
         output[2] = had_overflow * 10;

@@ -14,7 +14,7 @@ if plot_error:
     twiddle_bits = [13, 14, 16, 28]
     #titles = ["absolute error"]
 elif plot_for_bursts:
-    input_bursts = [1000] #range(10, 200, 30)
+    input_bursts = [1000, 2000, 3000, 4000] #range(10, 200, 30)
 else:
     input_bits = range(5,8,1)
 output_list = []
@@ -40,9 +40,9 @@ elif plot_for_bursts:
             "-n",
             str(amount_of_bursts),
             "-b",
-            "32",
+            "19",
             "-t",
-            "32",
+            "6",
             "SNS_Test_data_long_500.dat"
             ])).split()
         output = list(map(float ,output))
@@ -52,7 +52,7 @@ else:
         output = bytes.decode(check_output(
             ["./fix_fft",
             "-n",
-            "2000",
+            "3000",
             "-b",
             "19",
             "-t",
