@@ -16,5 +16,10 @@ architecture rom_b of rom is
     signal rom_mem :MEMORY :=(
 "000000010000","111010001110","110101001011","110010000110","110000000000","110010111010","110101110101","111010110010");
 begin
-    value <= rom_mem(to_integer(unsigned(addr)));
+    process(clk)
+    begin
+        if (rising_edge(clk)) then
+            value <= rom_mem(to_integer(unsigned(addr)));
+        end if;
+    end process;
 end rom_b;

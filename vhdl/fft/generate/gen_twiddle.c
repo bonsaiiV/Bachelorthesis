@@ -22,7 +22,12 @@ char * first_part =
 char * second_part =
         ");\n"
         "begin\n"
-        "    value <= rom_mem(to_integer(unsigned(addr)));\n"
+        "   process(clk)"
+        "   begin"
+        "       if (rising_edge(clk)) then"
+        "           value <= rom_mem(to_integer(unsigned(addr)));\n"
+        "       end if;"
+        "   end process;"
         "end rom_b;\n";
 
 double get_twiddle_real(int n, int i){
