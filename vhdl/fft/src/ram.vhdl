@@ -15,32 +15,28 @@ end ram;
 
 architecture ram_b of ram is
     type MEMORY is array(0 to 7) of std_logic_vector(width-1 downto 0);
-    (* ram_style = "block" *) signal ram_mem :MEMORY;
+    signal ram_mem :MEMORY;
 begin
     process(clk)
-        variable ram_write_addr_A: natural range 0 to 2**length-1;
-        variable ram_write_addr_B: natural range 0 to 2**length-1;
     begin
         if(rising_edge(clk)) then
+            read_A <= ram_mem(to_integer(unsigned(read_addr_A)));
             if(write_enable_A = '1') then
-                ram_write_addr_A := to_integer(unsigned(write_addr_A));
-                ram_mem(ram_write_addr_A) <= write_A;
-            end if;
-            if(write_enable_B = '1') then
-                ram_write_addr_B := to_integer(unsigned(write_addr_B));
-                ram_mem(ram_write_addr_B) <= write_B;
+                ram_mem(to_integer(unsigned(write_addr_A))) <= write_A;
             end if;
         end if;
     end process;
-    read_A <= ram_mem(to_integer(unsigned(read_addr_A)));
-    read_B <= ram_mem(to_integer(unsigned(read_addr_B)));
-    test0 <= ram_mem(0);
-    test1 <= ram_mem(4);
-    test2 <= ram_mem(2);
-    test3 <= ram_mem(6);
-    test4 <= ram_mem(1);
-    test5 <= ram_mem(5);
-    test6 <= ram_mem(3);
-    test7 <= ram_mem(7);
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            read_B <= ram_mem(to_integer(unsigned(read_addr_B)));
+            if(write_enable_B = '1') then
+                ram_mem(to_integer(unsigned(write_addr_B))) <= write_B;
+            end if;
+        end if;
+    end process;
+    
+
+
 
 end ram_b;
