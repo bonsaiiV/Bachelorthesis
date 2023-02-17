@@ -7,8 +7,9 @@ entity rom is
         length :integer
     ) ;
     port (
-        addr: in std_logic_vector(length-1 downto 0);
-        value: out std_logic_vector(width-1 downto 0)
+       clk: std_logic;
+       addr: in std_logic_vector(length-1 downto 0);
+       value: out std_logic_vector(width-1 downto 0)
     );
 end rom;
 architecture rom_b of rom is
