@@ -61,7 +61,7 @@ begin
             fft_running <= '0';
         end if;
     end process;
-    fft_done <= not fft_running;
+    generate_output <= not fft_running;
     active_clk <= fft_running and clk;
     process(clk)
     begin
