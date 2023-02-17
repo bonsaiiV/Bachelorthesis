@@ -36,5 +36,5 @@ exit
 else
 echo "Run OK"
 fi
-echo "Starting GTKWave"
-gtkwave testbench.vcd
+#echo "Starting GTKWave"
+#gtkwave testbench.vcd
