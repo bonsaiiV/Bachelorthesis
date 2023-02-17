@@ -16,7 +16,7 @@ end management_unit;
 architecture management_unit_b of management_unit is
     component counter
         generic (count_width : integer; max : integer);
-        port(clk : in std_logic;
+        port(enable, clk : in std_logic;
              clr : in std_logic;
              value : out std_logic_vector(count_width-1 downto 0);
              resets : out std_logic);
@@ -25,7 +25,7 @@ architecture management_unit_b of management_unit is
     signal is_getting_input : std_logic:= '1';
     signal layer_incr, layer_incr_buff : std_logic:='0';
     signal fft_finished: std_logic:='1'; -- internal impulse to end calculation 
-    signal index_resets, fft_running, active_clk: std_logic := '0';
+    signal index_resets, fft_running: std_logic := '0';
     signal index: std_logic_vector(N-2 downto 0);
     signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
     signal layer: std_logic_vector(layer_l-1 downto 0):= (others => '0');
@@ -37,8 +37,9 @@ begin
             max => 2**(N-1)-1
         )
         port map(
+            enable => fft_running,
             clr => fft_finished,
-            clk => active_clk,
+            clk => clk,
             value => index,
             resets => index_resets
         );
@@ -48,21 +49,34 @@ begin
             max => n-1
         )
         port map(
+            enable => layer_incr,
             clr => fft_finished,
-            clk => layer_incr,
+            clk => clk,
             value => layer,
             resets => fft_finished
         );
-    process(fft_start, fft_finished) 
-    begin
-        if(fft_start = '1') then
-            fft_running <= '1';
-        elsif(fft_finished = '1') then
-            fft_running <= '0';
-        end if;
-    end process;
+        process(clk) 
+        begin
+            if(rising_edge(clk)) then
+                if(fft_running = '0') then
+                    fft_start_impulse <= fft_start;
+                else
+                    fft_start_impulse <= '0';
+                end if;
+            end if;
+        end process;
+    
+        process(clk) 
+        begin
+            if(rising_edge(clk)) then
+                if(fft_start_impulse = '1') then
+                    fft_running <= '1';
+                elsif(fft_finished = '1') then
+                    fft_running <= '0';
+                end if;
+            end if;
+        end process;
     generate_output <= not fft_running;
-    active_clk <= fft_running and clk;
     process(clk)
     begin
         if(rising_edge(clk)) then
