@@ -18,9 +18,10 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            read_A <= ram_mem(to_integer(unsigned(addr_A)));
             if(write_enable_A = '1') then
                 ram_mem(to_integer(unsigned(addr_A))) <= write_A;
+            else
+                read_A <= ram_mem(to_integer(unsigned(addr_A)));
             end if;
         end if;
     end process;
@@ -28,9 +29,10 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            read_B <= ram_mem(to_integer(unsigned(addr_B)));
             if(write_enable_B = '1') then
                 ram_mem(to_integer(unsigned(addr_B))) <= write_B;
+            else
+                read_B <= ram_mem(to_integer(unsigned(addr_B)));
             end if;
         end if;
     end process;
