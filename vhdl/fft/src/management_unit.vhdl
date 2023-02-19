@@ -32,7 +32,7 @@ architecture management_unit_b of management_unit is
     signal is_merging: std_logic := '0';
     signal fft_finished, fft_calc_finished: std_logic:='1'; -- internal impulse to end calculation, default to 1 for make sure everything gets set correctly
 
-    signal io_active_ram: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
+    signal io_active_ram: std_logic_vector(log2_paths-2 downto 0) := (others => '0');
     signal io_write_enable, in_write_enable, calc_write_enable: std_logic_vector(2*paths-1 downto 0);
 
     signal layer_incr: std_logic:='0';
@@ -140,7 +140,7 @@ begin
         process(clk)
         begin
             if (rising_edge(clk)) then
-                io_active_ram <= rev_io_element_nr(N-2 downto N-log2_paths) & '0';
+                io_active_ram <= rev_io_element_nr(N-2 downto N-log2_paths+1) & '0';
             end if;
         end process;
         gen_ram_enable: for i in 0 to paths-1 generate 
