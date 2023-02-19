@@ -6,8 +6,8 @@ use xil_defaultlib.types.all;
 
 entity fft is
     generic(N : integer := 4;
-            width : integer := 19; 
-            width_twiddle : integer := 6;
+            width : integer := 24; 
+            width_twiddle : integer := 8;
             log2_paths : integer := 1;
             paths : integer := 2);
     port (
@@ -95,6 +95,7 @@ architecture fft_b of fft is
         length :integer
     ) ;
     port (
+        clk: in std_logic;
         addr: in std_logic_vector(length-1 downto 0);
         value: out std_logic_vector(width-1 downto 0)
     );
@@ -164,6 +165,7 @@ begin
             length => N - 1
         )
         port map (
+            clk => clk,
             addr => twiddle_addr(i),
             value => twiddle(i)
         );
