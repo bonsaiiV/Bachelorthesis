@@ -201,7 +201,7 @@ begin
 
     io_chunk_incr <= index_resets and is_doing_io;
  
-    index_clr <= index_resets when to_integer(unsigned(chunk)) = paths-1 or is_doing_io = '0' else '0'; 
+    index_clr <= index_resets or fft_finished when to_integer(unsigned(chunk)) = paths-1 or is_doing_io = '0' else '0'; 
 
 
 
