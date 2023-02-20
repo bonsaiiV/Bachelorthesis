@@ -83,9 +83,9 @@ architecture fft_b of fft is
         generic(width:integer;
             length:integer);
         port(bank0_addr_A, bank0_addr_B, bank1_addr_A, bank1_addr_B: in std_logic_vector(length-1 downto 0);
-             write_A, write_B: in std_logic_vector(width-1 downto 0);
+             data_write_A, data_write_B: in std_logic_vector(width-1 downto 0);
              write_enable_A, write_enable_B, clk: in std_logic;
-             read_A, read_B: out std_logic_vector(width-1 downto 0);
+             data_read_A, data_read_B: out std_logic_vector(width-1 downto 0);
              select_bank: in std_logic);
     end component;
 
@@ -150,13 +150,13 @@ begin
             bank0_addr_B => bank0_addr_B,
             bank1_addr_A => bank1_addr_A,
             bank1_addr_B => bank1_addr_B,
-            write_A => write_buff(2*i), 
-            write_B => write_buff(2*i+1),
+            data_write_A => write_buff(2*i), 
+            data_write_B => write_buff(2*i+1),
             write_enable_A => write_enable(2*i), 
             write_enable_B => write_enable(2*i+1),
             clk => clk,
-            read_A => read_buff(2*i), 
-            read_B => read_buff(2*i+1),
+            data_read_A => read_buff(2*i), 
+            data_read_B => read_buff(2*i+1),
             select_bank => select_bank
         );
         twiddle_rom: rom
