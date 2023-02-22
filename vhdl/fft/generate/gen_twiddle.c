@@ -12,8 +12,9 @@ char * first_part =
         "        length :integer\n"
         "    ) ;\n"
         "    port (\n"
-        "        addr: in std_logic_vector(length-1 downto 0);\n"
-        "        value: out std_logic_vector(width-1 downto 0)\n"
+        "       clk: std_logic;\n"
+        "       addr: in std_logic_vector(length-1 downto 0);\n"
+        "       value: out std_logic_vector(width-1 downto 0)\n"
         "    );\n"
         "end rom;\n"
         "architecture rom_b of rom is\n"
@@ -21,10 +22,13 @@ char * first_part =
         "    signal rom_mem :MEMORY :=(\n";
 char * second_part =
         ");\n"
-        "attribute rom_style : string;\n"
-        "   attribute rom_style of rom_mem : signal is \"block\";"
         "begin\n"
-        "    value <= rom_mem(to_integer(unsigned(addr)));\n"
+        "   process(clk)"
+        "   begin"
+        "       if (rising_edge(clk)) then"
+        "           value <= rom_mem(to_integer(unsigned(addr)));\n"
+        "       end if;"
+        "   end process;"
         "end rom_b;\n";
 
 double get_twiddle_real(int n, int i){
@@ -86,7 +90,7 @@ int main(int argc, char * argv[]){
             switch(argv[i][1]){
                 case 'n':
                     if(i+1>=argc){
-                        if(verbose) printf("Option -n requires a positional integer argument");
+                        if(verbose) printf("Option -n requires a positional integer argument"); //n is the length of a burst
                         exit(EXIT_FAILURE);
                     }
                     get_int(&fft_length, argv[i+1], 'n');
@@ -94,7 +98,7 @@ int main(int argc, char * argv[]){
                     break;
                 case 'b':
                     if(i+1>=argc){
-                        if(verbose) printf("Option -b requires a positional integer argument");
+                        if(verbose) printf("Option -b requires a positional integer argument"); //b is the accuracy in bits of the twiddle factors: size = (2*b) as it is complex
                         exit(EXIT_FAILURE);
                     }
                     get_int(&bits, argv[i+1], 'b');
@@ -108,8 +112,14 @@ int main(int argc, char * argv[]){
     }
     char * ret = malloc( sizeof(char) * (1<<(fft_length-1)) * (2*bits+3));
     generate_twiddle(fft_length, bits, ret);
-
-    printf("%s%s%s",first_part,ret,second_part);
+	FILE * outFile;
+	outFile = fopen(output_file, "w");
+	if (outFile == NULL){
+		printf("failed to open output-file");
+		exit(EXIT_FAILURE);
+	}
+    fprintf(outFile, "%s%s%s",first_part,ret,second_part);
+	fclose(outFile);
     free(ret);
     
 }

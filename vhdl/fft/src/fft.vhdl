@@ -58,6 +58,7 @@ architecture fft_b of fft is
         length :integer
     ) ;
     port (
+        clk: in std_logic;
         addr: in std_logic_vector(length-1 downto 0);
         value: out std_logic_vector(width-1 downto 0)
     );
@@ -95,6 +96,7 @@ begin
     );
     ram_real: ram
     generic map (
+        clk => clk,
         width => 2*width,
         length => N
     )

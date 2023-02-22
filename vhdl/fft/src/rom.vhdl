@@ -8,6 +8,7 @@ entity rom is
         length :integer
     ) ;
     port (
+        clk: std_logic;
         addr: in std_logic_vector(length-1 downto 0);
         value: out std_logic_vector(width-1 downto 0)
     );
@@ -20,7 +21,10 @@ architecture rom_b of rom is
         "110000000000","110101110101");
 begin
 
-
-    value <= rom_mem(to_integer(unsigned(addr)));
-
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            value <= rom_mem(to_integer(unsigned(addr)));
+        end if;
+    end process;
 end rom_b;
