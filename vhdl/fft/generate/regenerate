@@ -1,5 +1,5 @@
 #!/bin/bash -
 cd generate
-bin/gen_tb -n 4 -b 24 -i Test.dat -o fft_tb.vhdl
-bin/gen_twiddle -n 4 -b 8 -o grom.vhdl
+bin/gen_tb -n 3 -b 24 -i Test.dat -o fft_tb.vhdl
+bin/gen_twiddle -n 3 -b 8 -o grom.vhdl
 cd ..
