@@ -104,7 +104,7 @@ int read_input (const char* file_name, __int32_t val[], int bits, int length)
     for (int i = 0; i < length; i++)
     {
         fscanf(numbers, "%d\t%d\n ", &read1, &read2);
-        val[i] = read1<<(bits-11);
+        val[i] = read1<<(bits-13);
     }
     fclose(numbers);
 }
@@ -178,6 +178,7 @@ void gen_code_inputs(){
     for (int i = 0; i < fft_length >> 1; i++){
         strncpy(code_string_inputs_ptr , "inA<=\"",6); 
         int2bit(0, code_string_inputs_ptr+len_misc-3, bits);
+        printf("%d, ",signal[2*i] >> bits-13);
         int2bit(signal[2*i], code_string_inputs_ptr+bits+len_misc-3, bits);
         strncpy(code_string_inputs_ptr+2*bits+len_misc-3 , "\";\n",3);
 
