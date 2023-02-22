@@ -168,10 +168,10 @@ begin
     end generate gen_rev_index;
     addr_A_read <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input = '0' else '0' & rev_index;
     addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_getting_input = '0' else '1' & rev_index;
-    bank0_addr_A <= addr_A_read when select_bank = '0' else addr_A_write;
-    bank0_addr_B <= addr_B_read when select_bank = '0' else addr_B_write;
-    bank1_addr_A <= addr_A_read when select_bank = '1' else addr_A_write;
-    bank1_addr_B <= addr_B_read when select_bank = '1' else addr_B_write;
+    bank0_addr_A <= addr_A_read when select_bank = '1' else addr_A_write;
+    bank0_addr_B <= addr_B_read when select_bank = '1' else addr_B_write;
+    bank1_addr_A <= addr_A_read when select_bank = '0' else addr_A_write;
+    bank1_addr_B <= addr_B_read when select_bank = '0' else addr_B_write;
     get_input <= is_getting_input;
     is_getting_input <= is_doing_io and io_is_in;
 
