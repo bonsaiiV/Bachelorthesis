@@ -96,7 +96,6 @@ begin
     );
     ram_real: ram
     generic map (
-        clk => clk,
         width => 2*width,
         length => N
     )
@@ -119,6 +118,7 @@ begin
         length => N - 1
     )
     port map (
+        clk => clk,
         addr => twiddle_addr,
         value => twiddle
     );
