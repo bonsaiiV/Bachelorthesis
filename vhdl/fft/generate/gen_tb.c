@@ -104,7 +104,7 @@ int read_input (const char* file_name, __int32_t val[], int bits, int length)
     for (int i = 0; i < length; i++)
     {
         fscanf(numbers, "%d\t%d\n ", &read1, &read2);
-        val[i] = read1<<(bits-11);
+        val[i] = read1<<(bits-13);
     }
     fclose(numbers);
 }
