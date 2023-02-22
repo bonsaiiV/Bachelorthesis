@@ -1,3 +1,3 @@
 #!/bin/bash -
 
-./do src/c_mult.vhdl src/butterfly.vhdl generate/grom.vhdl src/ram.vhdl src/counter.vhdl src/management_unit.vhdl src/fft.vhdl generate/fft_tb.vhdl
+./do src/c_mult.vhdl src/butterfly.vhdl generate/grom.vhdl src/ram.vhdl src/ram_group.vhdl src/counter.vhdl src/management_unit.vhdl src/fft.vhdl generate/fft_tb.vhdl
