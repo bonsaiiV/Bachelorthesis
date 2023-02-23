@@ -5,9 +5,9 @@ library xil_defaultlib;
 use xil_defaultlib.types.all;
 
 entity fft is
-    generic(N : integer := 4;
+    generic(N : integer := 3;
             width : integer := 24; 
-            width_twiddle : integer := 8;
+            width_twiddle : integer := 10;
             log2_paths : integer := 1;
             paths : integer := 2);
     port (
@@ -35,7 +35,7 @@ architecture fft_b of fft is
     signal read_buff: MUX := (others => (others => '0'));
     signal write_buff: MUX := (others => (others => '0'));
     signal bfu_in, bfu_out: MUX := (others => (others => '0'));
-    signal inA_buff1, inB_buff1, inA_buff2, inB_buff2, inA_buff3, inB_buff3:  std_logic_vector(2*width-1 downto 0);
+    signal inA_buff1, inB_buff1, inA_buff2, inB_buff2, inA_buff3, inB_buff3, inA_buff4, inB_buff4:  std_logic_vector(2*width-1 downto 0);
 
     --address signals
 
@@ -178,9 +178,11 @@ begin
             inA_buff1 <= inA;
             inA_buff2 <= inA_buff1;
             inA_buff3 <= inA_buff2;
+            inA_buff4 <= inA_buff3;
             inB_buff1 <= inB;
             inB_buff2 <= inB_buff1;
             inB_buff3 <= inB_buff2;
+            inB_buff4 <= inB_buff3;
         end if;
     end process;
     --IO
@@ -188,8 +190,8 @@ begin
     outB <= read_buff(to_integer(unsigned(outB_source)));
 
     gen_write_switching: for i in 0 to paths-1 generate
-        write_buff(i) <= bfu_out(to_integer(unsigned(write_ram_switch(i)))) when get_input = '0' else inA_buff3;
-        write_buff(paths+i) <= bfu_out(to_integer(unsigned(write_ram_switch(paths+i)))) when get_input = '0' else inB_buff3;
+        write_buff(i) <= bfu_out(to_integer(unsigned(write_ram_switch(i)))) when get_input = '0' else inA_buff4;
+        write_buff(paths+i) <= bfu_out(to_integer(unsigned(write_ram_switch(paths+i)))) when get_input = '0' else inB_buff4;
     end generate gen_write_switching;
 
 
