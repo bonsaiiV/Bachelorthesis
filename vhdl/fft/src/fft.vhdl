@@ -44,6 +44,8 @@ architecture fft_b of fft is
     signal data_read_A, data_read_B, data_write_A, data_write_B: std_logic_vector(2*width-1 downto 0);
     signal get_input: std_logic;
 
+    signal inA_buff1, inA_buff2, inA_buff3, inA_buff4, inB_buff1, inB_buff2, inB_buff3, inB_buff4: std_logic_vector(2*width-1 downto 0);
+
     component ram_group
         generic(width:integer;
             length:integer);
@@ -125,10 +127,23 @@ begin
         addr => twiddle_addr,
         value => twiddle
     );
-    data_write_A <= bfu_A when get_input = '0' else inA;
-    data_write_B <= bfu_B when get_input = '0' else inB;
+    process(clk)
+    begin
+        if(rising_edge(clk)) then
+            inA_buff1 <= inA;
+            inA_buff2 <= inA_buff1;
+            inA_buff3 <= inA_buff2;
+            inA_buff4 <= inA_buff3;
+            inB_buff1 <= inB;
+            inB_buff2 <= inB_buff1;
+            inB_buff3 <= inB_buff2;
+            inB_buff4 <= inB_buff3;
+        end if;
+    end process;
+    data_write_A <= bfu_A when get_input = '0' else inA_buff4;
+    data_write_B <= bfu_B when get_input = '0' else inB_buff4;
     output_valid <= generate_output;
-    outA <= bfu_A;
-    outB <= bfu_B;
+    outA <= data_read_A;
+    outB <= data_read_B;
     
 end fft_b;

@@ -30,7 +30,7 @@ architecture management_unit_b of management_unit is
     signal fft_start_impulse: std_logic := '0';
     signal index_resets, fft_running, index_clr: std_logic := '0';
     
-    signal select_bank: std_logic := '0';
+    signal select_bank, select_bank_buff: std_logic := '0';
     signal calc_write_enable: std_logic;
 
     signal rev_index, index, index_buff: std_logic_vector(N-2 downto 0);
@@ -147,12 +147,14 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            select_bank_out <= select_bank;
+            select_bank_buff <= select_bank;
             index <= index_buff;
             addr_A_write <= addr_A_read;
             addr_B_write <= addr_B_read;
+            get_input <= is_getting_input;
         end if;
     end process;
+    select_bank_out <= select_bank_buff;
 --    process(clk)
 --    begin
 --        if(rising_edge(clk)) then
@@ -168,11 +170,11 @@ begin
     end generate gen_rev_index;
     addr_A_read <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when is_getting_input = '0' else '0' & rev_index;
     addr_B_read <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_getting_input = '0' else '1' & rev_index;
-    bank0_addr_A <= addr_A_read when select_bank = '1' else addr_A_write;
-    bank0_addr_B <= addr_B_read when select_bank = '1' else addr_B_write;
-    bank1_addr_A <= addr_A_read when select_bank = '0' else addr_A_write;
-    bank1_addr_B <= addr_B_read when select_bank = '0' else addr_B_write;
-    get_input <= is_getting_input;
+    bank0_addr_A <= addr_A_read when select_bank_buff = '1' else addr_A_write;
+    bank0_addr_B <= addr_B_read when select_bank_buff = '1' else addr_B_write;
+    bank1_addr_A <= addr_A_read when select_bank_buff = '0' else addr_A_write;
+    bank1_addr_B <= addr_B_read when select_bank_buff = '0' else addr_B_write;
+
     is_getting_input <= is_doing_io and io_is_in;
 
     process(clk)
