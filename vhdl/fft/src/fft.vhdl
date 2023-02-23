@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity fft is
     generic(N : integer := 3;
             width : integer := 24; 
-            width_twiddle : integer := 8);
+            width_twiddle : integer := 10);
     port (
         clk, fft_start : in std_logic;
         output_valid : out std_logic;

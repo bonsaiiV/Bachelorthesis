@@ -15,7 +15,7 @@ end rom;
 architecture rom_b of rom is
     type MEMORY is array(0 to 2**length-1) of std_logic_vector(width-1 downto 0);
     signal rom_mem :MEMORY :=(
-"0000000001000000","1101001100101101","1100000000000000","1101001111010011");
+"00000000000100000000","11010010110010110101","11000000000000000000","11010010111101001011");
 begin
    process(clk)   begin       if (rising_edge(clk)) then           value <= rom_mem(to_integer(unsigned(addr)));
        end if;   end process;end rom_b;
