@@ -178,7 +178,6 @@ void gen_code_inputs(){
     for (int i = 0; i < fft_length >> 1; i++){
         strncpy(code_string_inputs_ptr , "inA<=\"",6); 
         int2bit(0, code_string_inputs_ptr+len_misc-3, bits);
-        printf("%d, ",signal[2*i] >> bits-13);
         int2bit(signal[2*i], code_string_inputs_ptr+bits+len_misc-3, bits);
         strncpy(code_string_inputs_ptr+2*bits+len_misc-3 , "\";\n",3);
 
@@ -261,7 +260,7 @@ int main(int argc, char * argv[]){
     }
     fft_length = (1<<fft_n);
     
-    printf("%d\n", fft_length);
+
     gen_code_head();
     gen_code_signals();
     gen_code_inputs();
