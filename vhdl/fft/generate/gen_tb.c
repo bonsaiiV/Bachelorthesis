@@ -216,41 +216,45 @@ int main(int argc, char * argv[]){
     fft_n = 15;
     bits = 19;
     char * output_file = "fft_tb.vhdl";
+    char * config_file = 0;
     for (int i = 0; i < argc; i++)
     {
         if(*(argv[i]) == '-'){
             switch(argv[i][1]){
+                case 'c':
+                    if(i+1>=argc){
+                        if(verbose) printf("Option -c requires a positional file argument");
+                        exit(EXIT_FAILURE);
+                    }
+					config_file = argv[++i];
+                    break;
                 case 'n':
                     if(i+1>=argc){
                         if(verbose) printf("Option -n requires a positional integer argument");
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&fft_n, argv[i+1], 'n');
-                    i++;
+                    get_int(&fft_n, argv[++i], 'n');
                     break;
                 case 'b':
                     if(i+1>=argc){
                         if(verbose) printf("Option -b requires a positional integer argument");
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&bits, argv[i+1], 'b');
-                    i++;
+                    get_int(&bits, argv[++i], 'b');
                     break;
                 case 'o':
                     if(i+1>=argc){
                         if(verbose) printf("Option -o requires a positional file argument");
                         exit(EXIT_FAILURE);
                     }
-                    output_file = argv[i+1];
-                    i++;
+                    output_file = argv[++i];
                     break;
                 case 'i':
                     if(i+1>=argc){
                         if(verbose) printf("Option -i requires a positional file argument");
                         exit(EXIT_FAILURE);
                     }
-                    input_file = argv[i+1];
-                    i++;
+                    input_file = argv[++i];
                     break;
             }
         }
@@ -258,6 +262,27 @@ int main(int argc, char * argv[]){
             output_file = argv[i];
         }
     }
+	if (config_file){
+		FILE * conf_fp = fopen(config_file, "r");
+		if (!conf_fp) {
+			printf("Failed opening config file.\nMake sure it exists.\n");
+			exit(EXIT_FAILURE);
+		}
+		char opt = '0';
+		int val = 0;
+
+        while(fscanf(conf_fp, "-%c %d\n ", &opt, &val) != EOF){
+            switch(opt){
+                case 'n':
+                    fft_n = val;
+                    break;
+                case 'b':
+                    bits = val;
+                    break;
+            }
+
+		}
+	}
     fft_length = (1<<fft_n);
     
 
@@ -269,7 +294,7 @@ int main(int argc, char * argv[]){
     FILE * outFile;
     outFile = fopen(output_file, "w");
     if(outFile == NULL){ 
-        printf("failed opening output file");
+        printf("Failed opening output file.\n");
         exit(EXIT_FAILURE);
     }
     

@@ -84,10 +84,18 @@ int main(int argc, char * argv[]){
     int fft_length = 0;
     int bits = 0;
     char * output_file = 0;
+    char * config_file = 0;
     for (int i = 0; i < argc; i++)
     {
         if(*(argv[i]) == '-'){
             switch(argv[i][1]){
+                case 'c':
+                    if(i+1>=argc){
+                        if(verbose) printf("Option -c requires a positional file argument"); //n is the length of a burst
+                        exit(EXIT_FAILURE);
+                    }
+					config_file = argv[++i];
+                    break;
                 case 'n':
                     if(i+1>=argc){
                         if(verbose) printf("Option -n requires a positional integer argument"); //n is the length of a burst
@@ -110,6 +118,27 @@ int main(int argc, char * argv[]){
             output_file = argv[i];
         }
     }
+	if (config_file){
+		FILE * conf_fp = fopen(config_file, "r");
+		if (!conf_fp) {
+			printf("Failed opening config file.\nMake sure it exists.\n");
+			exit(EXIT_FAILURE);
+		}
+		char opt = '0';
+		int val = 0;
+
+        while(fscanf(conf_fp, "-%c %d\n ", &opt, &val) != EOF){
+            switch(opt){
+                case 'n':
+                    fft_length = val;
+                    break;
+                case 'b':
+                    bits = val;
+                    break;
+            }
+
+		}
+	}
     char * ret = malloc( sizeof(char) * (1<<(fft_length-1)) * (2*bits+3));
     generate_twiddle(fft_length, bits, ret);
 	FILE * outFile;
