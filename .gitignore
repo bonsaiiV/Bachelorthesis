@@ -1,12 +1,15 @@
-#test data
+# test data
 *.dat
 test.txt
 
-#compiled/output files
+# compiled/output files
 *.cf
 *.vcd
 bin/
 
-#vscode
+# generated vhdl files
+vhdl/fft/generate/*.vhdl
+
+# vscode
 .vscode
 *.code-workspace
