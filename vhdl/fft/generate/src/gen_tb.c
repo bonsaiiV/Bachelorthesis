@@ -10,23 +10,23 @@ char * code_string_head_start =
 "entity fft_tb is\n"
 "end fft_tb;\n"
 "architecture test of fft_tb is\n"
-"    component fft\n"
-"    port (\n"
-"       clk, fft_start: in std_logic;\n"
-"       output_valid : out std_logic;\n"
-"       inA, inB : in std_logic_vector(";
+"\tcomponent fft\n"
+"\tport (\n"
+"\t\tclk, fft_start: in std_logic;\n"
+"\t\toutput_valid : out std_logic;\n"
+"\t\tinA, inB : in std_logic_vector(";
 char * code_string_head_midline =
 " downto 0);\n"
-"       outA, outB: out std_logic_vector(";
+"\t\toutA, outB: out std_logic_vector(";
 char * code_string_head_end =
 " downto 0));\n"
-"    end component;\n";
+"\tend component;\n\n";
 
 char * code_string_signals;
 char * code_string_signals_end =
 " downto 0) := (others =>'0');\n"
-"    signal clk, fft_start : std_logic := '0';\n"
-"    signal output_valid : std_logic;\n"
+"\tsignal clk, fft_start : std_logic := '0';\n"
+"\tsignal output_valid : std_logic;\n"
 "begin\n"
 "    fft_i: fft\n"
 "    port map (\n"
@@ -38,39 +38,27 @@ char * code_string_signals_end =
 "        outA => outA,\n"
 "        outB => outB\n"
 "    );\n"
-"   process begin\n"
-"        wait for 1 ns;\n"
-"        clk <= '1';\n"
-"        wait for 1 ns;\n"
-"        clk <= '0';\n"
-"        fft_start <= '1';\n";
+"\tprocess begin\n"
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '1';\n"
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '0';\n"
+"\t\tfft_start <= '1';\n";
 
 char * code_string_inputs;
 char * clock_cycle = 
-"wait for 1 ns;\n"
-"clk <= '1';\n"
-"wait for 1 ns;\n"
-"clk <= '0';\n";
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '1';\n"
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '0';\n";
 
 char * code_string_run = 
-"while output_valid = '0' loop\n"
-"            wait for 1 ns;\n"
-"            clk <= '1';\n"
-"            wait for 1 ns;\n"
-"            clk <= '0';\n"
-"        end loop;\n";
-
-char * code_string_out;
-char * code_string_out_end =
-" loop\n"
-"        wait for 1 ns;\n"
-"            clk <= '1';\n"
-"            wait for 1 ns;\n"
-"            clk <= '0';\n"
-"        end loop;\n"
-"        wait;\n"
-"    end process;\n"
-"end test;\n";
+"\twhile output_valid = '0' loop\n"
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '1';\n"
+"\t\twait for 1 ns;\n"
+"\t\tclk <= '0';\n"
+"\tend loop;\n";
 
 int verbose = 0;
 int fft_length;
@@ -131,79 +119,117 @@ void gen_code_head(){
 
     head_append(code_string_head_end, length_csh_end);
 }
+char * code_string_signals_ptr;
+void signals_append(char *str, int len) {
+    strncpy(code_string_signals_ptr , str, len); 
+	code_string_signals_ptr += len;
+}
 
 void gen_code_signals(){
     int data_signal_width = 2*bits;
     int length_dsw = snprintf(NULL, 0, "%d", data_signal_width-1); //dsw = data signal width
+	
+	char * first_signal_str = "\tsignal inA, inB, outA, outB : std_logic_vector(";
+	int length_first_signal = strlen(first_signal_str);
 
-    code_string_signals = malloc(47 + length_dsw + 459);
-    char * code_string_signals_ptr = code_string_signals;
+	int length_signals_end = strlen(code_string_signals_end);
+    code_string_signals = malloc(length_first_signal + length_dsw + length_signals_end);
+    code_string_signals_ptr = code_string_signals;
 
-    strncpy(code_string_signals_ptr, "signal inA, inB, outA, outB : std_logic_vector(",47);
-    code_string_signals_ptr += 47;
+    signals_append(first_signal_str, length_first_signal);
 
     char dsw_str[length_dsw+1];
     snprintf(dsw_str, length_dsw+1, "%d", data_signal_width-1);
-    strncpy(code_string_signals_ptr, dsw_str, length_dsw);
-    code_string_signals_ptr += length_dsw;
+    signals_append(dsw_str, length_dsw);
 
-    strncpy(code_string_signals_ptr, code_string_signals_end, 459);
+    strncpy(code_string_signals_ptr, code_string_signals_end, length_signals_end);
 }
 char * code_string_inputs_ptr;
 void input_append(char *str, int len) {
     strncpy(code_string_inputs_ptr , str, len); 
+	code_string_inputs_ptr += len;
 }
 void gen_code_inputs(){
-    int len_misc = 9;
+	char * assign_a_str = "\t\tinA<=\"";
+	char * assign_b_str = "\t\tinB<=\"";
+	int len_assign = strlen(assign_a_str);
+	char * line_end_str = "\";\n";
+	int len_line_end = strlen(line_end_str);
+    int len_misc = len_assign + len_line_end;
     int line_length = 2*bits+len_misc;
     int len_clock_cycle = strlen(clock_cycle);
-    int total_len = 2*line_length+len_clock_cycle;
+    int block_len = 2*line_length+len_clock_cycle;
     __int32_t * signal = malloc( sizeof(__int32_t) * fft_length);
     read_input(input_file ,signal, bits, fft_length);
-
-    code_string_inputs = malloc(sizeof(char) * ((fft_length+10 )* total_len)+1);
-    char * code_string_inputs_ptr = code_string_inputs;
+	int total_len = sizeof(char) * ((fft_length+10 )* block_len)+1;
+    code_string_inputs = malloc(total_len);
+    code_string_inputs_ptr = code_string_inputs;
     for (int i = 0; i < fft_length >> 1; i++){
 
-        input_append("inA<=\"", 6); 
+        input_append(assign_a_str, len_assign); 
 
         int2bit(0, code_string_inputs_ptr, bits);
 		code_string_inputs_ptr += bits;
         int2bit(signal[2*i], code_string_inputs_ptr, bits);
 		code_string_inputs_ptr += bits;
 
+        input_append(line_end_str, len_line_end);
+        input_append(assign_b_str, len_assign); 
+
+        int2bit(0, code_string_inputs_ptr, bits);
+		code_string_inputs_ptr += bits;
+        int2bit(signal[2*i+1], code_string_inputs_ptr, bits);
+		code_string_inputs_ptr += bits;
+
         input_append("\";\n", 3);
 
-        input_append("inB<=\"", 6); 
-        int2bit(0, code_string_inputs_ptr + line_length + len_misc-3, bits);
-        int2bit(signal[2*i+1], code_string_inputs_ptr + line_length + bits + len_misc-3, bits);
-        strncpy(code_string_inputs_ptr+line_length+2*bits+len_misc-3, "\";\n",3);
+        if(i<(fft_length/2)-1) {
+			input_append(clock_cycle, len_clock_cycle);
+		}
+        else {
+			input_append("", 1);
+		}
 
-        if(i<(fft_length/2)-1)strncpy(code_string_inputs_ptr+line_length+2*bits+len_misc,clock_cycle, 54);
-        else strncpy(code_string_inputs_ptr+line_length+2*bits+len_misc,"", 1);
-
-        code_string_inputs_ptr += total_len;
     }
 
         free(signal);
 
 }
+
+char * code_string_out_end =
+" loop\n"
+"        wait for 1 ns;\n"
+"            clk <= '1';\n"
+"            wait for 1 ns;\n"
+"            clk <= '0';\n"
+"        end loop;\n"
+"        wait;\n"
+"\tend process;\n"
+"end test;\n";
+char * code_string_out;
+char * code_string_out_ptr;
+void out_append(char * str, int len) {
+    strncpy(code_string_out_ptr , str, len); 
+	code_string_out_ptr += len;
+}
 void gen_code_out(){
     int fft_length_half = fft_length/2; //flh = fft_length_half
     int length_flh = snprintf(NULL, 0, "%d", fft_length_half);
 
-    code_string_out = malloc(22 + length_flh + 164);
-    char * code_string_out_ptr = code_string_out;
+	char * for_loop_str = "\tfor i in 0 to ";
+	int length_for_loop_str = strlen(for_loop_str);
+	int length_code_string_out_end = strlen(code_string_out_end);
 
-    strncpy(code_string_out_ptr, "        for i in 0 to ", 22);
-    code_string_out_ptr += 22;
+    code_string_out = malloc(length_for_loop_str + length_flh + length_code_string_out_end);
+    code_string_out_ptr = code_string_out;
+
+    out_append(for_loop_str, length_for_loop_str);
 
     char flh_str[length_flh];
     snprintf(flh_str, length_flh+1, "%d", fft_length_half);
-    strncpy(code_string_out_ptr, flh_str, length_flh);
-    code_string_out_ptr += length_flh;
+    out_append(flh_str, length_flh);
 
-    strncpy(code_string_out_ptr, code_string_out_end, 164);
+    out_append(code_string_out_end, length_code_string_out_end);
 }
 int main(int argc, char * argv[]){
     fft_n = 15;
@@ -279,9 +305,13 @@ int main(int argc, char * argv[]){
     fft_length = (1<<fft_n);
     
 
+	printf("generating head section\n");
     gen_code_head();
+	printf("generating signal section\n");
     gen_code_signals();
+	printf("generating input section\n");
     gen_code_inputs();
+	printf("generating output section\n");
     gen_code_out();
 
     FILE * outFile;
