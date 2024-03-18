@@ -1,3 +1,6 @@
 #!/bin/bash -
-ghdl -a --work=xil_defaultlib src/fft_types.vhdl
-./do src/c_mult.vhdl src/butterfly.vhdl src/ram.vhdl src/ram_group.vhdl generate/grom.vhdl src/counter.vhdl src/management_unit.vhdl src/fft.vhdl generate/fft_tb.vhdl
+ghdl analyze --workdir=build src/fft_types.vhdl
+cd generate
+make
+cd ..
+./do src/bfu/c_mult.vhdl src/bfu/butterfly.vhdl src/mem/ram.vhdl src/mem/ram_group.vhdl generate/grom.vhdl src/mu/counter.vhdl src/mu/management_unit.vhdl src/fft.vhdl generate/fft_tb.vhdl

@@ -23,12 +23,12 @@ begin
             else
                 data_read_A <= ram_mem(to_integer(unsigned(addr_A)));
             end if;
-        end if;
-    end process;
+    --    end if;
+    --end process;
 
-    process(clk)
-    begin
-        if(rising_edge(clk)) then
+    --process(clk)
+    --begin
+    --    if(rising_edge(clk)) then
             if(write_enable_B = '1') then
                 ram_mem(to_integer(unsigned(addr_B))) <= data_write_B;
             else

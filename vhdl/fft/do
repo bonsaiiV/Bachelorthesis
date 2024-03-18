@@ -4,7 +4,7 @@
 for last in $@; do :; done
 tbfile=$(basename "$last" .vhdl)
 
-ghdl -s $@
+ghdl syntax --workdir=build $@
 if  [ $? != 0 ]
 then
 echo "Syntax-Check Failed"
@@ -12,7 +12,7 @@ exit
 else
 echo "Syntax-Check OK"
 fi
-ghdl -a $@
+ghdl analyze --workdir=build $@
 if [ $? != 0 ]
 then
 echo "Analysis Failed"
@@ -20,7 +20,7 @@ exit
 else
 echo "Analysis OK"
 fi
-ghdl -e $tbfile
+ghdl elaborate --workdir=build $tbfile
 if [ $? != 0 ]
 then
 echo "Build Failed"
@@ -28,7 +28,7 @@ exit
 else
 echo "Build OK"
 fi
-ghdl -r $tbfile --vcd=testbench.vcd --stop-time=200ns
+ghdl run --workdir=build $tbfile --vcd=testbench.vcd --stop-time=200ns
 if [ $? != 0 ];
 then
 echo "Run Failed"

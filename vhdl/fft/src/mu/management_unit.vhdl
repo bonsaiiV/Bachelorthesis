@@ -1,8 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-library xil_defaultlib;
-use xil_defaultlib.types.all;
+use work.fft_types.all;
 
 entity management_unit is
     generic(
@@ -24,8 +23,10 @@ end management_unit;
 
 architecture management_unit_b of management_unit is
     
+	constant do_data_in : std_logic := '1';
+	constant do_data_out: std_logic := '0';
     --control signals
-    signal io_is_in: std_logic := '1';
+    signal current_io_op: std_logic := do_data_in;
     signal io_done, is_doing_io: std_logic := '0'; 
     signal index_resets, fft_running: std_logic := '0';
     signal fft_start_impulse: std_logic := '0';
@@ -99,7 +100,7 @@ begin
     begin
         if(rising_edge(clk)) then
             if(io_done = '1') then
-                io_is_in <= not io_is_in;
+                current_io_op <= not current_io_op;
             end if;
         end if;
     end process;
@@ -108,7 +109,7 @@ begin
     begin
         if(rising_edge(clk)) then
             if(io_done = '1') then
-                if(io_is_in = '0') then
+                if(current_io_op = do_data_out) then
                     fft_finished <= '1';
                 end if;
             elsif(fft_start_impulse = '1') then
@@ -149,7 +150,7 @@ begin
         end generate gen_ram_enable;
     end generate gen_rev_io_else;
 
-    io_write_enable <= in_write_enable when io_is_in = '1' else (others => '0');
+    io_write_enable <= in_write_enable when current_io_op = do_data_in else (others => '0');
     calc_write_enable <= (others => '0') when disable_calc_write = '1' else (others => '1');
     write_enable <= io_write_enable when is_doing_io = '1' else calc_write_enable;
 
@@ -281,7 +282,7 @@ begin
         rev_io_element_nr(i) <= io_element_nr(N-2-i);
     end generate gen_rev_io;
 
-    --io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0);
+    --io_addresses <= rev_io_element_nr(N-log2_paths-2 downto 0) when current_io_op = '1' else io_element_nr(N-log2_paths-2 downto 0);
     process(clk)
     begin
         if(rising_edge(clk)) then
@@ -309,8 +310,8 @@ begin
     ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '0';
     ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '1';
 
-    io_addr_A <= rev_io_element_nr(N-log2_paths-1 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0) & '0';
-    io_addr_B <= rev_io_element_nr(N-log2_paths-1 downto 0) when io_is_in = '1' else io_element_nr(N-log2_paths-2 downto 0) & '1';
+    io_addr_A <= rev_io_element_nr(N-log2_paths-1 downto 0) when current_io_op = do_data_in else io_element_nr(N-log2_paths-2 downto 0) & '0';
+    io_addr_B <= rev_io_element_nr(N-log2_paths-1 downto 0) when current_io_op = do_data_in else io_element_nr(N-log2_paths-2 downto 0) & '1';
 
     addr_A <= io_addr_A when is_doing_io = '1' else ram_A_addresses;
     addr_B <= io_addr_B when is_doing_io = '1' else ram_B_addresses;
