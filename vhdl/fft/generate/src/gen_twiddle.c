@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include "common.h"
 
 char * first_part = 
         "library ieee;\n"
@@ -23,12 +24,12 @@ char * first_part =
 char * second_part =
         ");\n"
         "begin\n"
-        "   process(clk)"
-        "   begin"
-        "       if (rising_edge(clk)) then"
+        "   process(clk)\n"
+        "   begin\n"
+        "       if (rising_edge(clk)) then\n"
         "           value <= rom_mem(to_integer(unsigned(addr)));\n"
-        "       end if;"
-        "   end process;"
+        "       end if;\n"
+        "   end process;\n"
         "end rom_b;\n";
 
 double get_twiddle_real(int n, int i){
@@ -43,7 +44,7 @@ __int32_t ffix(double a, int komma_pos){
     return (__int32_t) ret;
 }
 
-int generate_twiddle(int n, int bits, char * ret){
+void generate_twiddle(int n, int bits, char * ret){
     __int32_t real_twiddle_int;
     __int32_t imag_twiddle_int;
     int l_word = (2*bits+3); // 2 numbers with size = bits + leading '"', closing '"' and ','
@@ -71,15 +72,6 @@ int generate_twiddle(int n, int bits, char * ret){
 
 int verbose = 0;
 
-void get_int(int * target, char * source, char option){
-    char * p;
-    *target = (int) strtol(source, &p, 10);
-    if(*p != '\0'){
-        if(verbose) printf("positional argument of -%c should be an int", option);
-        exit(EXIT_FAILURE);
-    }
-}
-
 int main(int argc, char * argv[]){
     int fft_length = 0;
     int bits = 0;
@@ -101,7 +93,7 @@ int main(int argc, char * argv[]){
                         if(verbose) printf("Option -n requires a positional integer argument"); //n is the length of a burst
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&fft_length, argv[i+1], 'n');
+                    get_int(&fft_length, argv[i+1], 'n', verbose);
                     i++;
                     break;
                 case 'b':
@@ -109,7 +101,7 @@ int main(int argc, char * argv[]){
                         if(verbose) printf("Option -b requires a positional integer argument"); //b is the accuracy in bits of the twiddle factors: size = (2*b) as it is complex
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&bits, argv[i+1], 'b');
+                    get_int(&bits, argv[i+1], 'b', verbose);
                     i++;
                     break;
             }

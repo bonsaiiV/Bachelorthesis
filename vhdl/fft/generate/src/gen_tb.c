@@ -1,14 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "common.h"
 //#include <math.h>
 
-int fft_length;
-int bits;
-int fft_n;
-char * input_file = "";
-
-char * code_string_head;
 char * code_string_head_start = 
 "library ieee;\n"
 "use ieee.std_logic_1164.all;\n"
@@ -78,16 +73,12 @@ char * code_string_out_end =
 "end test;\n";
 
 int verbose = 0;
+int fft_length;
+int bits;
+int fft_n;
+char * input_file = "";
 
-void int2bit(int n, char* out, int bits){
-    for (;bits--;n >>= 1) 
-    {
-        //printf("%c\n", out[bits]);  
-        out[bits] = ((n & 1) + '0');
-    }
-}
-
-int read_input (const char* file_name, __int32_t val[], int bits, int length)
+void read_input (const char* file_name, __int32_t val[], int bits, int length)
 {
     FILE *numbers;
     numbers = fopen(file_name, "r");
@@ -109,42 +100,36 @@ int read_input (const char* file_name, __int32_t val[], int bits, int length)
     fclose(numbers);
 }
 
-void get_int(int * target, char * source, char option){
-    char * p;
-    *target = (int) strtol(source, &p, 10);
-    if(*p != '\0'){
-        if(verbose) printf("positional argument of -%c should be an int", option);
-        exit(EXIT_FAILURE);
-    }
-}
 
+char* code_string_head;
+char* code_string_head_ptr;
+void head_append(char* str, int len){
+    strncpy(code_string_head_ptr, str, len);
+    code_string_head_ptr += len;
+}
 void gen_code_head(){
-    int length_csh_start = 245 - 1; //-1 to avoid copying \0 termination
-    int length_csh_midline = 53 - 1;
-    int length_csh_end = 33; //no -1 since it is the last part
+    int length_csh_start = strlen(code_string_head_start);
+    int length_csh_midline = strlen(code_string_head_midline);
+    int length_csh_end = strlen(code_string_head_end);
     int width_signal = 2*bits-1;
     int length_width_signal = snprintf(NULL, 0, "%d", width_signal);
 
     code_string_head = malloc(length_csh_start + length_width_signal + length_csh_midline + length_width_signal + length_csh_end);
-    char * code_string_head_ptr = code_string_head;
+    code_string_head_ptr = code_string_head;
 
-    strncpy(code_string_head_ptr, code_string_head_start, length_csh_start);
-    code_string_head_ptr += length_csh_start;
+	head_append(code_string_head_start, length_csh_start);
 
     char width_str[length_width_signal+1];
     snprintf(width_str, length_width_signal+1, "%d", width_signal);
-    strncpy(code_string_head_ptr, width_str, length_width_signal);
-    code_string_head_ptr += length_width_signal;
+    head_append(width_str, length_width_signal);
 
-    strncpy(code_string_head_ptr, code_string_head_midline, length_csh_midline);
-    code_string_head_ptr += length_csh_midline;
+    head_append(code_string_head_midline, length_csh_midline);
 
     char fft_n_str[length_width_signal+1];
     snprintf(fft_n_str, length_width_signal+1, "%d", width_signal);
-    strncpy(code_string_head_ptr, fft_n_str, length_width_signal);
-    code_string_head_ptr += length_width_signal;
+    head_append(fft_n_str, length_width_signal);
 
-    strncpy(code_string_head_ptr, code_string_head_end, length_csh_end);
+    head_append(code_string_head_end, length_csh_end);
 }
 
 void gen_code_signals(){
@@ -164,11 +149,14 @@ void gen_code_signals(){
 
     strncpy(code_string_signals_ptr, code_string_signals_end, 459);
 }
-
+char * code_string_inputs_ptr;
+void input_append(char *str, int len) {
+    strncpy(code_string_inputs_ptr , str, len); 
+}
 void gen_code_inputs(){
     int len_misc = 9;
     int line_length = 2*bits+len_misc;
-    int len_clock_cycle = 54;
+    int len_clock_cycle = strlen(clock_cycle);
     int total_len = 2*line_length+len_clock_cycle;
     __int32_t * signal = malloc( sizeof(__int32_t) * fft_length);
     read_input(input_file ,signal, bits, fft_length);
@@ -176,12 +164,17 @@ void gen_code_inputs(){
     code_string_inputs = malloc(sizeof(char) * ((fft_length+10 )* total_len)+1);
     char * code_string_inputs_ptr = code_string_inputs;
     for (int i = 0; i < fft_length >> 1; i++){
-        strncpy(code_string_inputs_ptr , "inA<=\"",6); 
-        int2bit(0, code_string_inputs_ptr+len_misc-3, bits);
-        int2bit(signal[2*i], code_string_inputs_ptr+bits+len_misc-3, bits);
-        strncpy(code_string_inputs_ptr+2*bits+len_misc-3 , "\";\n",3);
 
-        strncpy(code_string_inputs_ptr+line_length, "inB<=\"",6); 
+        input_append("inA<=\"", 6); 
+
+        int2bit(0, code_string_inputs_ptr, bits);
+		code_string_inputs_ptr += bits;
+        int2bit(signal[2*i], code_string_inputs_ptr, bits);
+		code_string_inputs_ptr += bits;
+
+        input_append("\";\n", 3);
+
+        input_append("inB<=\"", 6); 
         int2bit(0, code_string_inputs_ptr + line_length + len_misc-3, bits);
         int2bit(signal[2*i+1], code_string_inputs_ptr + line_length + bits + len_misc-3, bits);
         strncpy(code_string_inputs_ptr+line_length+2*bits+len_misc-3, "\";\n",3);
@@ -233,14 +226,14 @@ int main(int argc, char * argv[]){
                         if(verbose) printf("Option -n requires a positional integer argument");
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&fft_n, argv[++i], 'n');
+                    get_int(&fft_n, argv[++i], 'n', verbose);
                     break;
                 case 'b':
                     if(i+1>=argc){
                         if(verbose) printf("Option -b requires a positional integer argument");
                         exit(EXIT_FAILURE);
                     }
-                    get_int(&bits, argv[++i], 'b');
+                    get_int(&bits, argv[++i], 'b', verbose);
                     break;
                 case 'o':
                     if(i+1>=argc){
