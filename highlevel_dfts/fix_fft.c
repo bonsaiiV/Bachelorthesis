@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <gsl/gsl_fft_complex.h>
+#include <unistd.h>
+#include <getopt.h>
 
 #define real(...) __VA_ARGS__ * 2
 #define imag(...) __VA_ARGS__ * 2 + 1
 #define short __int64_t
+#define print_e(args...) fprintf(stderr, args)
 
 int komma_pos = 0;            
 int total_bits = 32;
@@ -112,7 +115,7 @@ void butterfly(short * x, int index1, int index2, int elements_per_block, int k)
 }
 
 
-int radix2_fft(short * x){
+void radix2_fft(short * x){
     /*int divider = length;
     n = 0;
     while(divider!= 1){
@@ -132,24 +135,23 @@ int radix2_fft(short * x){
 
 
 
-        int elements_per_block = 1 << (layer);
-        for(int block = 0; block < (1 << (n-layer) ); block++){
+		int elements_per_block = 1 << (layer);
+		for(int block = 0; block < (1 << (n-layer) ); block++){
 
-            for(int k = 0; k < (elements_per_block/2); k++){    
-                int index_even = (block * elements_per_block) + k;
-                int index_odd  = index_even + (elements_per_block/2);
+			for(int k = 0; k < (elements_per_block/2); k++){    
+    	        int index_even = (block * elements_per_block) + k;
+    	        int index_odd  = index_even + (elements_per_block/2);
 
-                butterfly(x, index_even, index_odd, elements_per_block, k);
-            }
-        }
+    	        butterfly(x, index_even, index_odd, elements_per_block, k);
+    	    }
+    	}
     }
 }
-
 
 //driver code
 
 
-int read_input (const char* file_name, int number_of_bursts, short *(*sensor1_ptr)[], short *(*sensor2_ptr)[])
+void read_input (const char* file_name, int number_of_bursts, short *(*sensor1_ptr)[], short *(*sensor2_ptr)[])
 {
     short **sensor1 = *sensor1_ptr;
     short **sensor2 = *sensor2_ptr;
@@ -157,8 +159,8 @@ int read_input (const char* file_name, int number_of_bursts, short *(*sensor1_pt
     numbers = fopen(file_name, "r");
 
     if (numbers == NULL){
-        printf("Error reading file, try ./dft /path/to/file\n");
-        exit (0);
+        print_e("Error reading file, try ./dft /path/to/file\n\tor use -h for additional info.\n");
+        exit(EXIT_FAILURE);
     }
     char str[60];
     fgets(str, 60, numbers);
@@ -169,7 +171,7 @@ int read_input (const char* file_name, int number_of_bursts, short *(*sensor1_pt
     {
         for (int i = 0; i < length; i++)
         {
-            if(EOF == fscanf(numbers, "%d\t%d\n ", &read1, &read2))had_overflow++;//return burst;
+            fscanf(numbers, "%d\t%d\n ", &read1, &read2);
             *(sensor1[burst]+real(i)) = ifix(read1);
             *(sensor1[burst]+imag(i)) = 0;
             *(sensor2[burst]+real(i)) = ifix(read2);
@@ -189,98 +191,98 @@ void get_int(int * target, char * source, char option){
     char * p;
     *target = (int) strtol(source, &p, 10);
     if(*p != '\0'){
-        if(verbose) printf("positional argument of -%c should be an int", option);
+        print_e("positional argument of -%c should be an int", option);
         exit(EXIT_FAILURE);
     }
 }
 
-void print_help_text(){
-    printf("This Program is designed to assist in creating an implementation of a fixpoint FFT on a FPGA for SNS.\n\n");
-    printf("As input a file, containing two integer signals, seperated by whitespace should be provided.\n");
-    printf(" The first line of the input file is skipped.\n\n");
-    printf("-h or -? to display this text.\n");
-    printf("-b: takes 1 positional integer argument, which specifies the width in bits of the input, intermediate values and result\n");
-    printf("  default : 32\n");
-    printf("-n: takes 1 positional integer argumemt, which specifies the number of bursts (frames), used in the postprocessing\n");
-    printf("  default : 1\n");
-    printf("-t: takes 1 positional integer argument, which specifies the width in bits of the twiddle factor.\n");
-    printf("  default : 32\n");
-    printf("-e: takes no argument. Enables error mode, comparison to gsl library fft.\n");
-    printf("-p: takes no argument. Enables printing of FFT result. Recomended only with low amount of input for the FFT\n\n");
-    printf("-l: takes 1 positional integer argument, which specifies the length of one burst as 2^l.\n");
-    printf("  default : 15\n");
-    printf("Any argument is neither starting with \"-\" nor consumed as argument for another option, is considered the input file.\n");
-    printf(" If there are multiple input files only the last one is used.\n");
-    return;
-}
+char * help_text = 
+    "This Program is designed to assist in creating an implementation\n"
+	"of a fixpoint FFT on a FPGA for SNS.\n\n"
+	"It can calculate a FFT using fixedpoint numbers with various accuracy.\n"
+	"The result can be compared to the gsl (GNU Scientific Library) implementation,\n"
+	"printed or the SNS result can be printed to be parsed to a diagram,\n"
+	"using the provided python script.\n"
+    "As input a file, containing two integer signals, seperated by whitespace\n"
+	"should be provided.\n"
+    "The first line of the input file is skipped.\n\n"
+	"Available options are:\n"
+    "  -h: display this text and exit\n"
+    "  -b: takes 1 positional integer argument, which specifies\n"
+	"      the width in bits of the input, intermediate values and result\n"
+    "    default : 32\n"
+    "  -n: takes 1 positional integer argumemt, which specifies the number of bursts (frames), used in the postprocessing\n"
+    "  default : 1\n"
+    "  -t: takes 1 positional integer argument, which specifies the width in bits of the twiddle factor.\n"
+    "  default : 32\n"
+    "  -e: takes no argument. Enables error mode, comparison to gsl library fft.\n"
+    "  -p: takes no argument. Enables printing of FFT result. Recomended only with low amount of input for the FFT\n"
+    "  -l: takes 1 positional integer argument, which specifies the length of one burst as 2^l.\n"
+    "  default : 15\n\n"
+    "Any argument is neither starting with \"-\" nor consumed as argument for another option, is considered the input file.\n"
+    " If there are multiple input files only the last one is used.\n";
 
+void run_print_mode(long * sensor1[]);
+void run_error_mode(long * sensor1[], long * sensor2[]);
+void run_default_mode(long * sensor1[], long * sensor2[], int number_of_bursts);
 int main(int argc, char *argv[]){
     int number_of_bursts = 1;
-    char * input_file;
     int print_mode = 0;
     int print_help = 0;
+	// get options provided via commandline
+	struct option longopts[] = {
+		{"help", 0, 0, 'h'},
+		{"length", 1, 0, 'l'},
+		{"bits", 1, 0, 'b'},
+		{"bursts", 1, 0, 'n'},
+		{"twiddle", 1, 0, 't'},
+		{0,0,0,0}};
+	char * shortopts = "h?n:b:l:ept:";
 
-    for(int i = 1; i < argc; i++){
-        if(*(argv[i]) == '-'){
-            
-            switch(argv[i][1]){
-                case 'h':
-                    print_help = 1;
-                    break;
-                case '?':
-                    print_help = 1;
-                    break;
-                case 'n':
-                    if(i+1>=argc){
-                        if(verbose) printf("Option -n requires a positional integer argument");
-                        exit(EXIT_FAILURE);
-                    }
-                    get_int(&number_of_bursts, argv[i+1], 'n');
-                    i++;
-                    break;
-                case 'b':
-                    if(i+1>=argc){
-                        if(verbose) printf("Option -b requires a positional integer argument");
-                        exit(EXIT_FAILURE);
-                    }
-                    get_int(&total_bits, argv[i+1], 'b');
-                    i++;
-                    break;
-                case 'l':
-                    if(i+1>=argc){
-                        if(verbose) printf("Option -l requires a positional integer argument");
-                        exit(EXIT_FAILURE);
-                    }
-                    get_int(&n, argv[i+1], 'l');
-                    i++;
-                    break;
-                case 't':
-                    if(i+1>=argc){
-                        if(verbose) printf("Option -t requires a positional integer argument");
-                        exit(EXIT_FAILURE);
-                    }
-                    get_int(&twiddle_bits, argv[i+1], 't');
-                    if(twiddle_bits < 3){
-                        if(verbose) printf("twiddle needs at least 3 bits");
-                        exit(EXIT_FAILURE);
-                    }
-                    i++;
-                    break;
-                case 'e':
-                    error_mode = 1;
-                    break;
-                case 'p':
-                    print_mode = 1;
-            }
-        }
-        else{
-            input_file = argv[i];
-        }
+	int opt;
+    while ((opt = getopt_long(argc, argv, shortopts, longopts, 0)) != -1){
+		switch(opt){
+			case 'h':
+				print_help = 1;
+				break;
+			case 'n':
+				get_int(&number_of_bursts, optarg, opt);
+				break;
+			case 'b':
+				get_int(&total_bits, optarg, opt);
+				break;
+			case 'l':
+				get_int(&n, optarg, opt);
+				break;
+			case 't':
+				get_int(&twiddle_bits, optarg, opt);
+				break;
+			case 'e':
+				error_mode = 1;
+				break;
+			case 'p':
+				print_mode = 1;
+				break;
+			default:
+				print_e("unknown option %c", opt);
+				exit(EXIT_FAILURE);
+		}
     }
     if(print_help){
-        print_help_text();
+        printf("%s", help_text);
         exit(EXIT_SUCCESS);
     }
+
+	// check arguments for correctness
+	if (optind >= argc) {
+		print_e("input_file is required, use -h for more info");
+		exit(EXIT_FAILURE);
+	}
+    char * input_file = argv[optind];
+	if(twiddle_bits < 3){
+		print_e("twiddle needs at least 3 bits");
+		exit(EXIT_FAILURE);
+	}
     if(error_mode && (number_of_bursts != 1)){
         if(verbose) printf("In error_mode number of bursts need to be 1.\nDefaulting number of bursts to 1.\n");
         number_of_bursts = 1;
@@ -317,117 +319,127 @@ int main(int argc, char *argv[]){
 
 
     if(print_mode){
-        printf("entering print mode\n");
-        for(int i = 0; i< length; i++){
-            printf("%f + %fi ,",unfix(*(sensor1[0]+real(i))), unfix(*(sensor1[0]+imag(i))));
-        }
-        printf("\n");
-    
-        radix2_fft(sensor1[0]);
-        radix2_fft(sensor2[0]);
-        for(int i = 0; i< length; i++){
-            int ri = lookup(i);
-            printf("%f + %fi ,",unfix(*(sensor1[0]+real(ri))), unfix(*(sensor1[0]+imag(ri))));
-        }
-        printf("\n");
+		run_print_mode(sensor1);
     }
     else if(error_mode){
-            //creating results to compare
-        double * sensor1_gsl;
-        double * sensor2_gsl;
-        sensor1_gsl = malloc(sizeof(double)*2*length);
-        sensor2_gsl = malloc(sizeof(double)*2*length);
-        for(int i = 0; i < length; i++){
-            sensor1_gsl[real(i)] = unfix(sensor1[0][real(i)]);
-            sensor1_gsl[imag(i)] = unfix(sensor1[0][imag(i)]);
-            sensor2_gsl[real(i)] = unfix(sensor2[0][real(i)]);
-            sensor2_gsl[imag(i)] = unfix(sensor2[0][imag(i)]);
-        }
-        gsl_fft_complex_radix2_forward(sensor1_gsl, 1,length);
-        gsl_fft_complex_radix2_forward(sensor2_gsl, 1,length);
-
-
-
-        radix2_fft(sensor1[0]);
-        radix2_fft(sensor2[0]);
-
-
-
-
-        float average_abs_error1 = 0.0;
-        float average_rel_error1 = 0.0;
-        float average_abs_error2 = 0.0;
-        float average_rel_error2 = 0.0;
-        float absolute_error;
-        
-        int r_index;
-        int normalize_factor = (1 << 15);
-
-        for(int i = 0; i < length/2; i++){
-            r_index = lookup(i);
-            absolute_error = fabs(sensor1_gsl[real(i)] - normalize_factor*unfix(*(sensor1[0]+real(r_index))));
-            average_abs_error1 += absolute_error;
-            average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[real(i)]));
-
-            absolute_error = fabs(sensor1_gsl[imag(i)] - normalize_factor*unfix(*(sensor1[0]+imag(r_index))));
-            average_abs_error1 += absolute_error;
-            average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[imag(i)]));
-
-            absolute_error = fabs(sensor2_gsl[real(i)] - normalize_factor*unfix(*(sensor2[0]+real(r_index))));
-            average_abs_error2 += absolute_error;
-            average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[real(i)]));
-
-            absolute_error = fabs(sensor2_gsl[imag(i)] - normalize_factor*unfix(*(sensor2[0]+imag(r_index))));
-            average_abs_error2 += absolute_error;
-            average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[imag(i)]));
-        }
-    
-    
-
-        average_abs_error1 /= length/2;
-        average_rel_error1 /= length/2;
-        average_abs_error2 /= length/2;
-        average_rel_error2 /= length/2;
-
-        if(verbose){
-            printf("bits for input: %d\n", total_bits);
-            if(had_overflow) printf("there were %d overflows in multiplications", had_overflow);
-            printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
-            printf("average relative error: %f and %f\n", average_rel_error1, average_rel_error2);
-        }
-        else
-        {
-            
-            printf("%f %f %f %f\n", average_abs_error1,average_abs_error2,average_rel_error1,average_rel_error2);
-        }
+		run_error_mode(sensor1, sensor2);
     }else
     {
-        double * output = malloc(sizeof(double)*length/2);
-        for(int i = 0; i < number_of_bursts; i++){
-            output[i] = 0.0;
-        }
-
-        double tmp1;
-        double tmp2;
-        int r_index;
-        for(int burst = 0; burst < number_of_bursts; burst++){
-            radix2_fft(sensor1[burst]);
-            radix2_fft(sensor2[burst]);
-            for(int i = 0; i < length/2; i++){
-                r_index = lookup(i);
-                tmp1 = unfix(sensor1[burst][real(r_index)]) * unfix(sensor1[burst][real(r_index)]) + unfix(sensor1[burst][imag(r_index)])*unfix(sensor1[burst][imag(r_index)]);
-                tmp2 = unfix(sensor2[burst][real(r_index)]) * unfix(sensor2[burst][real(r_index)]) + unfix(sensor2[burst][imag(r_index)])*unfix(sensor2[burst][imag(r_index)]);
-
-
-                output[i] += (tmp1)/number_of_bursts;
-            }
-        }
-        output[2] = had_overflow * 10;
-        for(int i = 0; i < length/2; i++){
-            printf("%f ",output[i]);
-        }
-        
-               
-    }
+		run_default_mode(sensor1, sensor2, number_of_bursts);
+	}
 }
 
+void run_print_mode(long * sensor1[]) {
+	printf("entering print mode\n");
+	for(int i = 0; i< length; i++){
+		printf("%f + %fi ,",unfix(*(sensor1[0]+real(i))), unfix(*(sensor1[0]+imag(i))));
+	}
+	printf("\n");
+
+	radix2_fft(sensor1[0]);
+	for(int i = 0; i< length; i++){
+		int ri = lookup(i);
+		printf("%f + %fi ,",unfix(*(sensor1[0]+real(ri))), unfix(*(sensor1[0]+imag(ri))));
+	}
+	printf("\n");
+}
+
+void run_error_mode(long * sensor1[], long * sensor2[]){
+	//creating results to compare
+	double * sensor1_gsl;
+	double * sensor2_gsl;
+	sensor1_gsl = malloc(sizeof(double)*2*length);
+	sensor2_gsl = malloc(sizeof(double)*2*length);
+	for(int i = 0; i < length; i++){
+		sensor1_gsl[real(i)] = unfix(sensor1[0][real(i)]);
+		sensor1_gsl[imag(i)] = unfix(sensor1[0][imag(i)]);
+		sensor2_gsl[real(i)] = unfix(sensor2[0][real(i)]);
+		sensor2_gsl[imag(i)] = unfix(sensor2[0][imag(i)]);
+	}
+	gsl_fft_complex_radix2_forward(sensor1_gsl, 1,length);
+	gsl_fft_complex_radix2_forward(sensor2_gsl, 1,length);
+
+
+
+	radix2_fft(sensor1[0]);
+	radix2_fft(sensor2[0]);
+
+
+
+
+	float average_abs_error1 = 0.0;
+	float average_rel_error1 = 0.0;
+	float average_abs_error2 = 0.0;
+	float average_rel_error2 = 0.0;
+	float absolute_error;
+	
+	int r_index;
+	int normalize_factor = (1 << 15);
+
+	for(int i = 0; i < length/2; i++){
+		r_index = lookup(i);
+		absolute_error = fabs(sensor1_gsl[real(i)] - normalize_factor*unfix(*(sensor1[0]+real(r_index))));
+		average_abs_error1 += absolute_error;
+		average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[real(i)]));
+
+		absolute_error = fabs(sensor1_gsl[imag(i)] - normalize_factor*unfix(*(sensor1[0]+imag(r_index))));
+		average_abs_error1 += absolute_error;
+		average_rel_error1 += absolute_error/fmax(1.0, fabs(sensor1_gsl[imag(i)]));
+
+		absolute_error = fabs(sensor2_gsl[real(i)] - normalize_factor*unfix(*(sensor2[0]+real(r_index))));
+		average_abs_error2 += absolute_error;
+		average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[real(i)]));
+
+		absolute_error = fabs(sensor2_gsl[imag(i)] - normalize_factor*unfix(*(sensor2[0]+imag(r_index))));
+		average_abs_error2 += absolute_error;
+		average_rel_error2 += absolute_error/fmax(1.0, fabs(sensor2_gsl[imag(i)]));
+	}
+
+
+
+	average_abs_error1 /= length/2;
+	average_rel_error1 /= length/2;
+	average_abs_error2 /= length/2;
+	average_rel_error2 /= length/2;
+
+	if(verbose){
+		printf("bits for input: %d\n", total_bits);
+		if(had_overflow) printf("there were %d overflows in multiplications", had_overflow);
+		printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
+		printf("average relative error: %f and %f\n", average_rel_error1, average_rel_error2);
+	}
+	else
+	{
+		
+		printf("%f %f %f %f\n", average_abs_error1,average_abs_error2,average_rel_error1,average_rel_error2);
+	}
+}
+
+void run_default_mode(long * sensor1[], long * sensor2[], int number_of_bursts){
+	double * output = malloc(sizeof(double)*length/2);
+	for(int i = 0; i < number_of_bursts; i++){
+		output[i] = 0.0;
+	}
+
+	double tmp1;
+	double tmp2;
+	int r_index;
+	for(int burst = 0; burst < number_of_bursts; burst++){
+		radix2_fft(sensor1[burst]);
+		radix2_fft(sensor2[burst]);
+		for(int i = 0; i < length/2; i++){
+			r_index = lookup(i);
+			tmp1 = unfix(sensor1[burst][real(r_index)]) * unfix(sensor1[burst][real(r_index)]) + unfix(sensor1[burst][imag(r_index)])*unfix(sensor1[burst][imag(r_index)]);
+			tmp2 = unfix(sensor2[burst][real(r_index)]) * unfix(sensor2[burst][real(r_index)]) + unfix(sensor2[burst][imag(r_index)])*unfix(sensor2[burst][imag(r_index)]);
+
+
+			output[i] += (tmp1)/number_of_bursts;
+		}
+	}
+	output[2] = had_overflow * 10;
+	for(int i = 0; i < length/2; i++){
+		printf("%f ",output[i]);
+	}
+	
+		   
+}
