@@ -22,8 +22,8 @@ architecture ram_b of ram_group is
              data_read_A, data_read_B: out std_logic_vector(width-1 downto 0));
     end component;
 
-    signal write_enable_0A, write_enable_0B, write_enable_1A, write_enable_1B: std_logic;
-    signal data_read_0A, data_read_0B, data_read_1A, data_read_1B: std_logic_vector(width-1 downto 0);
+    signal write_enable_0A, write_enable_0B, write_enable_1A, write_enable_1B: std_logic := '0';
+    signal data_read_0A, data_read_0B, data_read_1A, data_read_1B: std_logic_vector(width-1 downto 0) := (others => '0');
 begin
     write_enable_0A <= write_enable_A when select_bank = '0' else '0';
     write_enable_0B <= write_enable_B when select_bank = '0' else '0';

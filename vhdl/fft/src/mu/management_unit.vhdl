@@ -48,8 +48,8 @@ architecture management_unit_b of management_unit is
     signal ram_A_addresses, ram_B_addresses: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
     signal merge_step, merge_zero: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
-    signal io_addr_A, io_addr_B: std_logic_vector(N-log2_paths-1 downto 0);
-    signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0);
+    signal io_addr_A, io_addr_B: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
+    signal io_element_nr, rev_io_element_nr: std_logic_vector(N-2 downto 0) := (others => '0');
     signal chunk, chunk_buff: std_logic_vector(log2_paths-1 downto 0) := (others => '0');
     signal addr_A, addr_B, addr_A_write, addr_B_write: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
@@ -59,9 +59,9 @@ architecture management_unit_b of management_unit is
     signal twiddle_mask: std_logic_vector(N-1 downto 0) := (others => '0');
     signal constant_mask: std_logic_vector(N-1 downto 0) := ('1', others => '0'); 
     type path_index_ARRAY is array(0 to paths-1) of std_logic_vector(log2_paths-1 downto 0);
-    signal rev_path_index, merge_step_dependend_path_index, tmp_path_index: path_index_ARRAY;
+    signal rev_path_index, merge_step_dependend_path_index, tmp_path_index: path_index_ARRAY := (others => (others => '0'));
 
-    signal layer_independend_twiddle_addr, full_index: twiddle_addr_ARRAY;
+    signal layer_independend_twiddle_addr, full_index: twiddle_addr_ARRAY := (others => (others => '0'));
 
 
     component counter
@@ -190,7 +190,7 @@ begin
     process(clk)
     begin
         if(rising_edge(clk)) then
-            if(to_integer(unsigned(layer)) >= n-log2_paths-1) then
+            if(to_integer(unsigned(layer)) >= n-log2_paths-1) or merge_step /= merge_zero then
                 is_merging <= '1';
             else
                 is_merging <= '0';
@@ -212,7 +212,7 @@ begin
     --this counter is for IO:
     --since the index doesn't iterate over N/2 anymore (instead N/(2*2^log2_paths))
     --this is because there are 2^log2_paths butterfly units, each acting on 2 elements
-    --io hoever stays on 2 wires, so it needs 2^log2_paths iterations
+    --io however stays on 2 wires, so it needs 2^log2_paths iterations
     IO_Chunk_cnt: counter
         generic map (
             count_width => log2_paths,
@@ -308,7 +308,7 @@ begin
     
     --when merging, ram elements are taken in order since permutation happens on ram level not address level
     ram_A_addresses <= std_logic_vector(unsigned(index & '0') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '0';
-    ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when merge_step = merge_zero else index & '1';
+	ram_B_addresses <= std_logic_vector(unsigned(index & '1') ROL to_integer(unsigned(layer))) when is_merging = '0' else index & '1';
 
     io_addr_A <= rev_io_element_nr(N-log2_paths-1 downto 0) when current_io_op = do_data_in else io_element_nr(N-log2_paths-2 downto 0) & '0';
     io_addr_B <= rev_io_element_nr(N-log2_paths-1 downto 0) when current_io_op = do_data_in else io_element_nr(N-log2_paths-2 downto 0) & '1';

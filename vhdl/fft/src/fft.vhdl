@@ -34,18 +34,18 @@ architecture fft_b of fft is
     signal read_buff: MUX := (others => (others => '0'));
     signal write_buff: MUX := (others => (others => '0'));
     signal bfu_in, bfu_out: MUX := (others => (others => '0'));
-    signal inA_buff1, inB_buff1, inA_buff2, inB_buff2, inA_buff3, inB_buff3, inA_buff4, inB_buff4:  std_logic_vector(2*width-1 downto 0);
+    signal inA_buff1, inB_buff1, inA_buff2, inB_buff2, inA_buff3, inB_buff3, inA_buff4, inB_buff4:  std_logic_vector(2*width-1 downto 0) := (others => '0');
 
     --address signals
 
-    signal outA_source, outB_source : std_logic_vector(log2_paths downto 0);
+    signal outA_source, outB_source : std_logic_vector(log2_paths downto 0) := (others => '0');
 
     signal read_ram_switch, write_ram_switch: addr_MUX := (others => (others => '0'));
 
     signal bank0_addr_A, bank0_addr_B, bank1_addr_A, bank1_addr_B: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
     signal reversed_A_addr, reversed_B_addr: std_logic_vector(N-log2_paths-1 downto 0) := (others => '0');
 
-    signal select_bank: std_logic;
+    signal select_bank: std_logic := '0';
 
     --twiddle signals
     type TWIDS is array (0 to paths-1) of std_logic_vector(2*width_twiddle-1 downto 0);
@@ -170,7 +170,7 @@ begin
         );
     end generate gen_path;
 
-    --buffering inputs, because mu needs a few cicles to get ready
+    --buffering inputs, because mu needs a few cycles to get ready
     process(clk)
     begin
         if(rising_edge(clk)) then

@@ -1,3 +1,4 @@
+-- this is an example, contents need to be generated for a specific accuracy/length
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

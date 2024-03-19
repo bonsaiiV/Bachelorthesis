@@ -305,13 +305,9 @@ int main(int argc, char * argv[]){
     fft_length = (1<<fft_n);
     
 
-	printf("generating head section\n");
     gen_code_head();
-	printf("generating signal section\n");
     gen_code_signals();
-	printf("generating input section\n");
     gen_code_inputs();
-	printf("generating output section\n");
     gen_code_out();
 
     FILE * outFile;

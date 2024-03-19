@@ -6,7 +6,7 @@ entity counter is
     generic (count_width : integer; max : integer);
     port(enable, clk : in std_logic;
          clr : in std_logic;
-         value : out std_logic_vector(count_width-1 downto 0);
+         value : out std_logic_vector(count_width-1 downto 0):= (others => '0');
          resets : out std_logic:='0');
 end counter;
 

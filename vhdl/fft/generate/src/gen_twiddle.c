@@ -15,7 +15,7 @@ char * first_part =
         "    port (\n"
         "       clk: std_logic;\n"
         "       addr: in std_logic_vector(length-1 downto 0);\n"
-        "       value: out std_logic_vector(width-1 downto 0)\n"
+        "       value: out std_logic_vector(width-1 downto 0) := (others => '0')\n"
         "    );\n"
         "end rom;\n"
         "architecture rom_b of rom is\n"
