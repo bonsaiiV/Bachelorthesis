@@ -5,6 +5,8 @@ test.txt
 # compiled/output files
 *.cf
 *.vcd
+build/
+.cache/
 bin/
 
 # generated vhdl files
