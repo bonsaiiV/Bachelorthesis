@@ -110,13 +110,16 @@ int main(int argc, char *argv[]){
 		{"twiddle", 1, 0, 't'},
 		{"threads", 1, 0, 'm'},
 		{0,0,0,0}};
-	char * shortopts = "h?n:b:l:ept:m:";
+	char * shortopts = "h?n:b:l:evpt:m:";
 
 	int opt;
     while ((opt = getopt_long(argc, argv, shortopts, longopts, 0)) != -1){
 		switch(opt){
 			case 'h':
 				print_help = 1;
+				break;
+			case 'v':
+				verbose = 1;
 				break;
 			case 'n':
 				get_int(&number_of_bursts, optarg, opt);
@@ -131,7 +134,12 @@ int main(int argc, char *argv[]){
 				get_int(&fft_config.twiddle_bits, optarg, opt);
 				break;
 			case 'm':
+#ifdef MULTI_THREAD
 				get_int(&fft_config.threads, optarg, opt);
+#else
+				fprintf(stderr, "Not compiled with support for multithreading.\n");
+				exit(1);
+#endif
 				break;
 			case 'e':
 				error_mode = 1;
@@ -160,7 +168,7 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
     if(error_mode && (number_of_bursts != 1)){
-        if(verbose) printf("In error_mode number of bursts need to be 1.\nDefaulting number of bursts to 1.\n");
+        if(verbose) fprintf(stderr, "In error_mode number of bursts need to be 1.\nDefaulting number of bursts to 1.\n");
         number_of_bursts = 1;
     }
     komma_pos = fft_config.total_bits - 13;
@@ -251,6 +259,13 @@ void run_error_mode(long * sensor1[], long * sensor2[], struct fftConfig fft_con
 	had_overflow += run_fix_fft(sensor1[0], fft_config);
 	had_overflow += run_fix_fft(sensor2[0], fft_config);
 
+/*
+	for(int i = 0; i < length; i++){
+		printf("sensor1: %f,\tsensor1-gsl: %f\n",
+			unfix(sensor1[0][real(i)], komma_pos),
+			sensor1_gsl[real(i)]
+		);
+	}//*/
 	// calculate error
 	float average_abs_error1 = 0.0;
 	float average_rel_error1 = 0.0;
@@ -259,7 +274,7 @@ void run_error_mode(long * sensor1[], long * sensor2[], struct fftConfig fft_con
 	float absolute_error;
 	
 	int r_index;
-	int normalize_factor = (1 << 15);
+	int normalize_factor = (1 << fft_config.n);
 
 	for(int i = 0; i < length/2; i++){
 		r_index = lookup(i, fft_config.n);
@@ -307,7 +322,7 @@ void run_error_mode(long * sensor1[], long * sensor2[], struct fftConfig fft_con
 
 	if(verbose){
 		printf("bits for input: %d\n", fft_config.total_bits);
-		if(had_overflow) printf("there were %d overflows in multiplications", had_overflow);
+		printf("there were %d overflows in multiplications\n", had_overflow);
 		printf("average absolute error: %f and %f\n", average_abs_error1, average_abs_error2);
 		printf("average relative error: %f and %f\n", average_rel_error1, average_rel_error2);
 	}

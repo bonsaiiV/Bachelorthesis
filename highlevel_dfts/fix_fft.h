@@ -15,6 +15,7 @@ float unfix(long a, int komma_pos);
 
 long ifix(int a, int komma_pos);
 long ffix(double a, int komma_pos);
+long fix_mul(long a, long b, struct fftConfig config, int* overflow);
 
 int lookup(int index, int n);
 

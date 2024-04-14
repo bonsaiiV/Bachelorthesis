@@ -26,7 +26,7 @@ long ffix(double a, int komma_pos){
 
 //multiplies a twiddle value with another fixed point number
 //DONT use for another multiplication since twiddle might have a different accuracy
-long fix_mul(short a, short b, struct fftConfig config, int* overflow){
+long fix_mul(long a, long b, struct fftConfig config, int* overflow){
     __int128_t c;
     c = ((__int128_t) a * (__int128_t) b) >> (config.twiddle_bits-(2+config.do_round));
     b = c & config.do_round;
@@ -62,10 +62,10 @@ int rotate(int index, int amount, int n){
 }
 
 long get_twiddle_real(int elements_per_block, int k, int komma_pos){
-    return ifix(cos(-2* M_PI*k/elements_per_block), komma_pos);
+    return ffix(cos(-2* M_PI*k/elements_per_block), komma_pos);
 }
 long get_twiddle_imag(int elements_per_block, int k, int komma_pos){
-    return ifix(sin(-2* M_PI*k/elements_per_block), komma_pos);
+    return ffix(sin(-2* M_PI*k/elements_per_block), komma_pos);
 }
 
 
@@ -137,13 +137,13 @@ int run_fix_fft(long * x, struct fftConfig config){
        }*/
 
 
-
-		omp_set_num_threads(config.threads);
 		int elements_per_block = 1 << (layer);
+#ifdef MULTI_THREAD
+		omp_set_num_threads(config.threads);
 		#pragma omp parallel for
+#endif
 		for(int block = 0; block < (1 << (config.n-layer) ); block++){
 			for(int k = 0; k < (elements_per_block/2); k++){    
-				//printf("Hello from process: %d\n", omp_get_thread_num());
     	        int index_even = (block * elements_per_block) + k;
     	        int index_odd  = index_even + (elements_per_block/2);
 				int bfu_overflow = 0;
