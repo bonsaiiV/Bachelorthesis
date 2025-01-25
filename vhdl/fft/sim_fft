@@ -3,4 +3,4 @@ ghdl analyze --workdir=build src/fft_types.vhdl
 cd generate
 make
 cd ..
-./do src/bfu/c_mult.vhdl src/bfu/butterfly.vhdl src/mem/ram.vhdl src/mem/ram_group.vhdl generate/grom.vhdl src/mu/counter.vhdl src/mu/management_unit.vhdl src/fft.vhdl generate/fft_tb.vhdl
+./do src/butterfly_unit/c_mult.vhdl src/butterfly_unit/bfu.vhdl src/memory/ram.vhdl src/memory/ram_group.vhdl generate/grom.vhdl src/management_unit/counter.vhdl src/management_unit/mu.vhdl src/fft.vhdl generate/fft_tb.vhdl
