@@ -1,5 +1,12 @@
 
-.PHONY: test_ram, test_delay, test_c_mult, test_bfu
+.PHONY: test_ram_group, test_ram, test_delay, test_c_mult, test_bfu
+
+# this one is just a smoke test
+test_ram_group:
+	./do\
+		src/memory/ram.vhdl\
+		src/memory/ram_group.vhdl\
+		test/memory/ram_group_tb.vhdl
 
 test_ram:
 	./do\
