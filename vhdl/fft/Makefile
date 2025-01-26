@@ -1,17 +1,21 @@
 
-.PHONY:
+.PHONY: test_ram, test_delay, test_c_mult, test_bfu
+
+test_ram:
+	./do\
+		src/memory/ram.vhdl\
+		test/memory/ram_tb.vhdl
+
 test_delay:
 	./do\
 		src/common/delay.vhdl\
 		test/common/delay_tb.vhdl
 
-.PHONY:
 test_c_mult:
 	./do\
 		src/butterfly_unit/c_mult.vhdl\
 		test/butterfly_unit/c_mult_tb.vhdl
 
-.PHONY:
 test_bfu:
 	./do\
 		src/common/delay.vhdl\

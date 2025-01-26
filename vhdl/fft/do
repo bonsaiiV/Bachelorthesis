@@ -4,28 +4,28 @@
 for last in $@; do :; done
 tbfile=$(basename "$last" .vhdl)
 
-ghdl syntax --workdir=build $@
+ghdl syntax --std=08 --workdir=build $@
 if  [ $? != 0 ]; then
 	echo "Syntax-Check Failed"
 	exit
 else
 	echo "Syntax-Check OK"
 fi
-ghdl analyze --workdir=build $@
+ghdl analyze --std=08 --workdir=build $@
 if [ $? != 0 ]; then
 	echo "Analysis Failed"
 	exit
 else
 	echo "Analysis OK"
 fi
-ghdl elaborate --workdir=build $tbfile
+ghdl elaborate --std=08 --workdir=build $tbfile
 if [ $? != 0 ]; then
 	echo "Build Failed"
 	exit
 else
 	echo "Build OK"
 fi
-ghdl run --workdir=build $tbfile --vcd=testbench.vcd --stop-time=250ns
+ghdl run --std=08 --workdir=build $tbfile --vcd=testbench.vcd --stop-time=250ns
 if [ $? != 0 ]; then
 	echo "Run Failed"
 	exit
