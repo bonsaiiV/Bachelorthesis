@@ -51,7 +51,7 @@ begin
 		clk <= '0';
 		wait for 10 ns;
 		ASSERT result_real = 0 AND result_imag = 0
-		REPORT "result is one cycle too early";
+		REPORT "result is 1 cycle too early";
 		B_real <= "00101101"; 
 		B_imag <= "00101101";
 		clk <= '1';

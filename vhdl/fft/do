@@ -5,36 +5,32 @@ for last in $@; do :; done
 tbfile=$(basename "$last" .vhdl)
 
 ghdl syntax --workdir=build $@
-if  [ $? != 0 ]
-then
-echo "Syntax-Check Failed"
-exit
+if  [ $? != 0 ]; then
+	echo "Syntax-Check Failed"
+	exit
 else
-echo "Syntax-Check OK"
+	echo "Syntax-Check OK"
 fi
 ghdl analyze --workdir=build $@
-if [ $? != 0 ]
-then
-echo "Analysis Failed"
-exit
+if [ $? != 0 ]; then
+	echo "Analysis Failed"
+	exit
 else
-echo "Analysis OK"
+	echo "Analysis OK"
 fi
 ghdl elaborate --workdir=build $tbfile
-if [ $? != 0 ]
-then
-echo "Build Failed"
-exit
+if [ $? != 0 ]; then
+	echo "Build Failed"
+	exit
 else
-echo "Build OK"
+	echo "Build OK"
 fi
 ghdl run --workdir=build $tbfile --vcd=testbench.vcd --stop-time=250ns
-if [ $? != 0 ];
-then
-echo "Run Failed"
-exit
+if [ $? != 0 ]; then
+	echo "Run Failed"
+	exit
 else
-echo "Run OK"
+	echo "Run OK"
 fi
 #echo "Starting GTKWave"
 #gtkwave testbench.vcd

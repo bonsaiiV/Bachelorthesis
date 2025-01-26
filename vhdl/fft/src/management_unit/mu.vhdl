@@ -347,4 +347,3 @@ begin
     twiddle_mask <= std_logic_vector(shift_right(signed(constant_mask), to_integer(unsigned(layer))));
 
 end management_unit_b;
-    
