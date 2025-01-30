@@ -1,5 +1,8 @@
+.PHONY : clean
+
 regen: grom.vhdl fft_tb.vhdl
 	:
+
 grom.vhdl: bin/gen_twiddle input/twid_config
 	bin/gen_twiddle -c input/twid_config -o grom.vhdl
 fft_tb.vhdl: bin/gen_tb input/tb_config
@@ -8,9 +11,9 @@ fft_tb.vhdl: bin/gen_tb input/tb_config
 gen_twiddle: bin/gen_twiddle
 	:
 bin/gen_twiddle: bin/gen_twiddle.o bin/common.o
-	gcc bin/gen_twiddle.o bin/common.o -o bin/gen_twiddle -lm
+	clang bin/gen_twiddle.o bin/common.o -o bin/gen_twiddle -lm
 bin/gen_twiddle.o: src/gen_twiddle.c
-	gcc -c -o bin/gen_twiddle.o src/gen_twiddle.c
+	clang -c -o bin/gen_twiddle.o src/gen_twiddle.c
 
 gen_tb: bin/gen_tb
 	:
