@@ -4,10 +4,10 @@
 #include <getopt.h>
 #include "common.h"
 
-char * first_part = 
+static char * template = 
 		"library ieee;\n"
 		"use ieee.std_logic_1164.all;\n"
-		"use ieee.numeric_std.all;\n"
+		"use ieee.numeric_std.all;\n\n"
 		"entity rom is\n"
 		"	generic(\n"
 		"		width :integer:=12;\n"
@@ -18,12 +18,11 @@ char * first_part =
 		"	   addr: in std_logic_vector(length-1 downto 0);\n"
 		"	   value: out std_logic_vector(width-1 downto 0) := (others => '0')\n"
 		"	);\n"
-		"end rom;\n"
+		"end rom;\n\n"
 		"architecture rom_b of rom is\n"
 		"	type MEMORY is array(0 to 2**length-1) of std_logic_vector(width-1 downto 0);\n"
-		"	signal rom_mem :MEMORY :=(\n";
-char * second_part =
-		");\n"
+		"	signal rom_mem :MEMORY := (\n"
+		"\t%s);\n"
 		"begin\n"
 		"   process(clk)\n"
 		"   begin\n"
@@ -56,9 +55,9 @@ void generate_twiddle(int n, int bits, char * ret){
 		imag_twiddle_int = ffix(get_twiddle_imag(n,i), bits-2);
 		for (int pos = 0; pos < bits; pos++)
 		{
-			ret[i*l_word+bits-pos] = imag_twiddle_int & 1 + '0'; // index +1 for already placed '"' -1 because pos starts at 0
+			ret[i*l_word+bits-pos] = (imag_twiddle_int & 1) + '0'; // index +1 for already placed '"' -1 because pos starts at 0
 			imag_twiddle_int >>= 1;
-			ret[i*l_word+2*bits-pos] = real_twiddle_int & 1 + '0'; //2* bit to target second half (real part) 
+			ret[i*l_word+2*bits-pos] = (real_twiddle_int & 1) + '0'; //2* bit to target second half (real part) 
 			real_twiddle_int >>= 1;
 		}
 		ret[i*l_word+2*bits+1] = '"';
@@ -132,7 +131,7 @@ int main(int argc, char * argv[]){
 		free(ret);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(outFile, "%s%s%s",first_part,ret,second_part);
+	fprintf(outFile, template, ret);
 	fclose(outFile);
 	free(ret);
 	
